@@ -1,0 +1,269 @@
+---
+title: neurenix help
+description: Display help information about CLI commands and usage
+---
+
+The `help` command provides comprehensive information about available Neurenix CLI commands and their usage.
+
+## Usage
+
+```bash
+neurenix help [command]
+```
+
+## Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `command` | string | Specific command to get help for (optional) |
+
+## Examples
+
+### General help
+
+```bash
+neurenix help
+```
+
+```
+Neurenix CLI - Command Line Interface for the Neurenix Framework
+
+Usage: neurenix <command> [<args>]
+
+Available commands:
+  init         - Initialize a new Neurenix project with a standard folder structure, configuration files, and optional dataset
+  run          - Run a Neurenix model training script with specified configuration options
+  save         - Save the current project state, including model, configurations, and data
+  predict      - Make predictions using a trained model
+  eval         - Evaluate a trained model with specific metrics
+  export       - Export a trained model to a specific format (ONNX, TorchScript, etc.)
+  hardware     - Manage hardware settings, including auto-selection, device information, and benchmarking
+  preprocess   - Preprocess input data for model training
+  monitor      - Monitor model training in real-time
+  optimize     - Optimize a model by adjusting hyperparameters or applying techniques like quantization
+  dataset      - Manage datasets for training and evaluation
+  serve        - Serve a trained model as a RESTful API
+  help         - Display help information about available commands
+
+For more information about a specific command, use:
+  neurenix help <command>
+  neurenix <command> --help
+```
+
+### Help for specific command
+
+```bash
+neurenix help init
+```
+
+This displays detailed help for the `init` command, equivalent to running:
+
+```bash
+neurenix init --help
+```
+
+### Get help for run command
+
+```bash
+neurenix help run
+```
+
+Displays usage information, options, and examples for the `run` command.
+
+### Get help for hardware command
+
+```bash
+neurenix help hardware
+```
+
+Shows available actions and options for hardware management.
+
+## Available Commands
+
+All Neurenix CLI commands that can be queried with `help`:
+
+### Project Management
+- **init** - Initialize new projects
+- **save** - Save project state
+
+### Training & Evaluation
+- **run** - Execute training scripts
+- **eval** - Evaluate model performance
+- **monitor** - Monitor training progress
+
+### Inference
+- **predict** - Generate predictions
+- **serve** - Deploy models as APIs
+
+### Model Operations
+- **export** - Export to different formats
+- **optimize** - Optimize model performance
+
+### Data Management
+- **dataset** - Manage datasets
+- **preprocess** - Preprocess data
+
+### System
+- **hardware** - Configure hardware settings
+- **help** - Display help information
+
+## Using --help Flag
+
+Every command supports the `--help` flag for inline help:
+
+```bash
+neurenix <command> --help
+```
+
+Examples:
+
+```bash
+neurenix init --help
+neurenix run --help
+neurenix predict --help
+neurenix dataset --help
+```
+
+## Error Handling
+
+### Unknown command
+
+```bash
+neurenix help unknown_command
+```
+
+```
+Error: Unknown command 'unknown_command'
+
+Available commands:
+  init         - Initialize a new Neurenix project with a standard folder structure, configuration files, and optional dataset
+  run          - Run a Neurenix model training script with specified configuration options
+  save         - Save the current project state, including model, configurations, and data
+  ...
+```
+
+## Quick Reference
+
+### Get started
+
+```bash
+# See all commands
+neurenix help
+
+# Learn about project initialization
+neurenix help init
+
+# Learn about training
+neurenix help run
+```
+
+### Common workflows
+
+```bash
+# Project setup help
+neurenix help init
+neurenix help dataset
+neurenix help preprocess
+
+# Training help
+neurenix help run
+neurenix help monitor
+neurenix help save
+
+# Deployment help
+neurenix help optimize
+neurenix help export
+neurenix help serve
+```
+
+## Help Output Format
+
+Each command's help includes:
+
+1. **Description**: What the command does
+2. **Usage**: Basic syntax
+3. **Arguments**: Required and optional arguments
+4. **Options**: Available flags and parameters
+5. **Examples**: Common usage patterns
+
+## Interactive Help
+
+For the most up-to-date help information, use the `--help` flag:
+
+```bash
+neurenix init --help
+neurenix run --help
+neurenix predict --help
+```
+
+## Additional Resources
+
+Beyond the CLI help:
+
+### Documentation
+
+Visit the full documentation for detailed guides and tutorials:
+- [CLI Overview](/cli/overview)
+- [Getting Started Guide](/quickstart)
+- [API Reference](/api)
+
+### Command Documentation
+
+Detailed documentation for each command:
+- [init command](/cli/init)
+- [run command](/cli/run)
+- [predict command](/cli/predict)
+- [eval command](/cli/eval)
+- [export command](/cli/export)
+- [hardware command](/cli/hardware)
+- [preprocess command](/cli/preprocess)
+- [monitor command](/cli/monitor)
+- [optimize command](/cli/optimize)
+- [dataset command](/cli/dataset)
+- [save command](/cli/save)
+- [serve command](/cli/serve)
+
+### Examples
+
+Check out example projects and workflows:
+```bash
+# View example in documentation
+neurenix help init
+neurenix help run
+```
+
+## Tips
+
+### 1. Start with general help
+
+```bash
+neurenix help
+```
+
+### 2. Explore specific commands
+
+```bash
+neurenix help <command>
+```
+
+### 3. Use --help for details
+
+```bash
+neurenix <command> --help
+```
+
+### 4. Combine with examples
+
+The help output includes practical examples you can copy and modify.
+
+### 5. Check version info
+
+```bash
+neurenix --version
+```
+
+## See Also
+
+- [CLI Overview](/cli/overview) - Complete CLI documentation
+- [Getting Started](/quickstart) - Quick start guide
+- [Examples](/examples) - Example projects and workflows

@@ -1,0 +1,223 @@
+---
+title: neurenix save
+description: Save the current project state including models, configurations, and data
+---
+
+The `save` command saves the current project state by creating a checkpoint that includes models, configurations, and optionally data and logs.
+
+## Usage
+
+```bash
+neurenix save [options]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | `checkpoint_{timestamp}` | Name for the checkpoint |
+| `--include-data` | flag | false | Include data directory in the checkpoint |
+| `--include-logs` | flag | false | Include logs directory in the checkpoint |
+| `--output-dir` | string | `checkpoints` | Output directory for checkpoints |
+
+## Checkpoint Contents
+
+A checkpoint always includes:
+- **models/**: All saved model files
+- **configs/**: Configuration files (or `config.json` if it exists)
+- **metadata.json**: Checkpoint information (timestamp, name, Neurenix version, options)
+
+Optionally includes:
+- **data/**: Training/validation data (with `--include-data`)
+- **logs/**: Training logs (with `--include-logs`)
+
+## Examples
+
+### Save basic checkpoint
+
+```bash
+neurenix save
+```
+
+```
+Saving models...
+Saving configurations...
+Project state saved to checkpoints/checkpoint_1678901234
+```
+
+### Save with custom name
+
+```bash
+neurenix save --name best_model_v1
+```
+
+```
+Saving models...
+Saving configurations...
+Project state saved to checkpoints/best_model_v1
+```
+
+### Save with data and logs
+
+```bash
+neurenix save --name experiment_1 --include-data --include-logs
+```
+
+```
+Saving models...
+Saving configurations...
+Saving data...
+Saving logs...
+Project state saved to checkpoints/experiment_1
+```
+
+### Save to custom directory
+
+```bash
+neurenix save --name milestone_v2 --output-dir backup/checkpoints
+```
+
+```
+Saving models...
+Saving configurations...
+Project state saved to backup/checkpoints/milestone_v2
+```
+
+### Full backup before deployment
+
+```bash
+neurenix save \
+  --name production_deployment \
+  --include-data \
+  --include-logs \
+  --output-dir backups
+```
+
+```
+Saving models...
+Saving configurations...
+Saving data...
+Saving logs...
+Project state saved to backups/production_deployment
+```
+
+## Checkpoint Metadata
+
+Each checkpoint includes a `metadata.json` file with information about the save:
+
+```json
+{
+  "timestamp": 1678901234.567,
+  "name": "best_model_v1",
+  "neurenix_version": "0.1.0",
+  "include_data": false,
+  "include_logs": false
+}
+```
+
+## Use Cases
+
+### 1. Save training milestones
+
+Save checkpoints at key training milestones:
+
+```bash
+neurenix save --name epoch_50
+neurenix save --name best_accuracy
+neurenix save --name final_model
+```
+
+### 2. Version control for models
+
+Create versioned checkpoints for model iterations:
+
+```bash
+neurenix save --name model_v1.0
+neurenix save --name model_v1.1
+neurenix save --name model_v2.0
+```
+
+### 3. Pre-deployment backup
+
+Create a full backup before deploying to production:
+
+```bash
+neurenix save \
+  --name pre_deployment_$(date +%Y%m%d) \
+  --include-data \
+  --include-logs
+```
+
+### 4. Experiment tracking
+
+Save results of different experiments:
+
+```bash
+neurenix save --name baseline_model
+neurenix save --name with_augmentation
+neurenix save --name larger_batch_size
+```
+
+## Restoring from Checkpoint
+
+To restore a project from a checkpoint, copy the contents back to your project directory:
+
+```bash
+cp -r checkpoints/best_model_v1/* .
+```
+
+Or selectively restore components:
+
+```bash
+# Restore only models
+cp -r checkpoints/best_model_v1/models/* models/
+
+# Restore only configuration
+cp checkpoints/best_model_v1/configs/config.json config.json
+```
+
+## Best Practices
+
+### 1. Use descriptive names
+
+Give checkpoints meaningful names that indicate their purpose:
+
+```bash
+neurenix save --name baseline_acc_0.92
+neurenix save --name after_hyperparameter_tuning
+neurenix save --name final_production_model
+```
+
+### 2. Regular checkpoints during long training
+
+Save periodic checkpoints during extended training sessions:
+
+```bash
+# In a training loop
+for epoch in {10..100..10}; do
+  neurenix save --name epoch_$epoch
+done
+```
+
+### 3. Include data for reproducibility
+
+When saving experiment results, include data to ensure reproducibility:
+
+```bash
+neurenix save --name paper_submission --include-data
+```
+
+### 4. Clean up old checkpoints
+
+Regularly remove outdated checkpoints to save disk space:
+
+```bash
+# Keep only the 5 most recent checkpoints
+ls -t checkpoints | tail -n +6 | xargs -I {} rm -r checkpoints/{}
+```
+
+## See Also
+
+- [Run command](/cli/run) - Train models
+- [Export command](/cli/export) - Export to different formats
+- [Optimize command](/cli/optimize) - Optimize saved models

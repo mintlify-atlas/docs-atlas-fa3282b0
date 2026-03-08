@@ -153,9 +153,17 @@
               "cli/init",
               "cli/run",
               "cli/train",
+              "cli/save",
+              "cli/predict",
               "cli/eval",
               "cli/export",
-              "cli/serve"
+              "cli/serve",
+              "cli/hardware",
+              "cli/preprocess",
+              "cli/monitor",
+              "cli/optimize",
+              "cli/dataset",
+              "cli/help"
             ]
           }
         ]

@@ -1,0 +1,503 @@
+---
+title: neurenix dataset
+description: Manage datasets including downloading, registering, splitting, and converting
+---
+
+The `dataset` command provides comprehensive dataset management capabilities including listing, downloading, registering, splitting, and converting datasets.
+
+## Usage
+
+```bash
+neurenix dataset <action> [options]
+```
+
+## Actions
+
+| Action | Description |
+|--------|-------------|
+| `list` | List available registered datasets |
+| `download` | Download a dataset from URL or registry |
+| `register` | Register a dataset in the local registry |
+| `info` | Get detailed information about a dataset |
+| `split` | Split a dataset into train/val/test sets |
+| `convert` | Convert dataset to different format |
+
+## Available Formats
+
+- `csv` - Comma-separated values
+- `json` - JSON format
+- `npy` - NumPy binary format
+- `hdf5` - HDF5 format
+- `tfrecord` - TensorFlow record format
+- `parquet` - Apache Parquet format
+
+## Examples
+
+### List registered datasets
+
+```bash
+neurenix dataset list
+```
+
+```
+Available datasets:
+
+cifar10:
+  URL: https://datasets.neurenix.ai/cifar10
+  Format: auto-detect
+  Metadata: {"classes": 10, "size": 60000}
+
+imagenet:
+  URL: https://datasets.neurenix.ai/imagenet
+  Format: auto-detect
+  Metadata: {"classes": 1000, "size": 1281167}
+```
+
+### List in JSON format
+
+```bash
+neurenix dataset list --format json
+```
+
+```json
+{
+  "cifar10": {
+    "url": "https://datasets.neurenix.ai/cifar10",
+    "format": "auto-detect",
+    "metadata": {"classes": 10, "size": 60000}
+  },
+  "imagenet": {
+    "url": "https://datasets.neurenix.ai/imagenet",
+    "format": "auto-detect",
+    "metadata": {"classes": 1000, "size": 1281167}
+  }
+}
+```
+
+### Download a dataset
+
+```bash
+neurenix dataset download cifar10
+```
+
+```
+Downloading dataset from cifar10...
+Saving dataset to data/cifar10.csv...
+Dataset downloaded and saved to data/cifar10.csv
+```
+
+### Download to specific location
+
+```bash
+neurenix dataset download cifar10 --output datasets/cifar10.csv
+```
+
+```
+Downloading dataset from cifar10...
+Saving dataset to datasets/cifar10.csv...
+Dataset downloaded and saved to datasets/cifar10.csv
+```
+
+### Download from URL
+
+```bash
+neurenix dataset download https://example.com/data.csv --output data/external.csv
+```
+
+```
+Downloading dataset from https://example.com/data.csv...
+Saving dataset to data/external.csv...
+Dataset downloaded and saved to data/external.csv
+```
+
+### Register a dataset
+
+```bash
+neurenix dataset register my_dataset https://example.com/dataset.csv
+```
+
+```
+Dataset 'my_dataset' registered successfully.
+```
+
+### Register with format
+
+```bash
+neurenix dataset register my_images /path/to/images --format hdf5
+```
+
+```
+Dataset 'my_images' registered successfully.
+```
+
+### Register with metadata
+
+```bash
+neurenix dataset register custom_data data.csv \
+  --metadata '{"classes": 5, "samples": 10000}'
+```
+
+```
+Dataset 'custom_data' registered successfully.
+```
+
+### Get dataset info
+
+```bash
+neurenix dataset info cifar10
+```
+
+```
+Dataset: cifar10
+URL: https://datasets.neurenix.ai/cifar10
+Format: auto-detect
+Metadata: {"classes": 10, "size": 60000}
+```
+
+### Get info for local dataset
+
+```bash
+neurenix dataset info data/my_dataset.csv
+```
+
+```
+Loading dataset from data/my_dataset.csv...
+Dataset: my_dataset.csv
+Path: /home/user/project/data/my_dataset.csv
+Format: csv
+Size: 5000
+Metadata: {}
+```
+
+### Split a dataset
+
+```bash
+neurenix dataset split data/full_dataset.csv --ratio 0.7,0.15,0.15
+```
+
+```
+Loading dataset from data/full_dataset.csv...
+Splitting dataset with ratio 0.7,0.15,0.15...
+Saving train split (700 samples) to data/train/train_data.csv...
+Saving val split (150 samples) to data/val/val_data.csv...
+Saving test split (150 samples) to data/test/test_data.csv...
+Dataset split successfully. Results saved to data
+```
+
+### Split with shuffling
+
+```bash
+neurenix dataset split data/dataset.csv \
+  --ratio 0.8,0.2 \
+  --shuffle \
+  --seed 42
+```
+
+```
+Loading dataset from data/dataset.csv...
+Splitting dataset with ratio 0.8,0.2...
+Saving train split (800 samples) to data/train/train_data.csv...
+Saving val split (200 samples) to data/val/val_data.csv...
+Dataset split successfully. Results saved to data
+```
+
+### Convert dataset format
+
+```bash
+neurenix dataset convert data.csv data.json --output-format json
+```
+
+```
+Loading dataset from data.csv...
+Converting dataset to json format...
+Dataset converted and saved to data.json
+```
+
+### Convert with explicit input format
+
+```bash
+neurenix dataset convert input.txt output.csv \
+  --input-format csv \
+  --output-format csv
+```
+
+```
+Loading dataset from input.txt...
+Converting dataset to csv format...
+Dataset converted and saved to output.csv
+```
+
+## Action Details
+
+### list
+
+List all registered datasets in the local registry.
+
+**Options:**
+- `--format`: Output format (`text`, `json`)
+
+```bash
+neurenix dataset list [--format text|json]
+```
+
+### download
+
+Download a dataset from a URL or registered name.
+
+**Arguments:**
+- `source`: Dataset URL or registered name
+
+**Options:**
+- `--output`: Output directory or file (default: `data`)
+- `--format`: Dataset format (auto-detected if not specified)
+
+```bash
+neurenix dataset download <source> [--output <path>] [--format <format>]
+```
+
+### register
+
+Register a dataset in the local registry for easy access.
+
+**Arguments:**
+- `name`: Dataset name
+- `url`: Dataset URL or file path
+
+**Options:**
+- `--format`: Dataset format
+- `--metadata`: Metadata (JSON string or file path)
+
+```bash
+neurenix dataset register <name> <url> [--format <format>] [--metadata <json>]
+```
+
+### info
+
+Get detailed information about a dataset.
+
+**Arguments:**
+- `name`: Dataset name or path
+
+**Options:**
+- `--format`: Output format (`text`, `json`)
+
+```bash
+neurenix dataset info <name> [--format text|json]
+```
+
+### split
+
+Split a dataset into train/validation/test sets.
+
+**Arguments:**
+- `input`: Input dataset file or directory
+
+**Options:**
+- `--output`: Output directory (default: `data`)
+- `--ratio`: Split ratios (default: `0.8,0.2`)
+- `--shuffle`: Shuffle data before splitting
+- `--seed`: Random seed for reproducibility
+
+```bash
+neurenix dataset split <input> [--output <dir>] [--ratio <ratios>] [--shuffle] [--seed <int>]
+```
+
+### convert
+
+Convert a dataset to a different format.
+
+**Arguments:**
+- `input`: Input dataset file or directory
+- `output`: Output file or directory
+
+**Options:**
+- `--input-format`: Input format (auto-detected if not specified)
+- `--output-format`: Output format (required)
+
+```bash
+neurenix dataset convert <input> <output> [--input-format <format>] --output-format <format>
+```
+
+## Error Handling
+
+### Dataset not found
+
+```bash
+neurenix dataset download unknown_dataset
+```
+
+```
+Error managing dataset: Dataset 'unknown_dataset' not found in registry
+```
+
+### Invalid split ratio
+
+```bash
+neurenix dataset split data.csv --ratio 0.5,0.3
+```
+
+```
+Error: Invalid split ratio: Split ratios must sum to 1.0
+```
+
+### File not found
+
+```bash
+neurenix dataset split missing.csv
+```
+
+```
+Error: Input dataset 'missing.csv' not found.
+```
+
+## Use Cases
+
+### 1. Download and prepare dataset
+
+```bash
+# Download
+neurenix dataset download cifar10 --output data/cifar10.csv
+
+# Split into train/val/test
+neurenix dataset split data/cifar10.csv --ratio 0.7,0.15,0.15 --shuffle
+```
+
+### 2. Register custom dataset
+
+```bash
+# Register
+neurenix dataset register my_data /path/to/data.csv \
+  --metadata '{"description": "Custom dataset", "version": "1.0"}'
+
+# Download later
+neurenix dataset download my_data
+```
+
+### 3. Convert dataset format
+
+```bash
+# CSV to JSON
+neurenix dataset convert data.csv data.json --output-format json
+
+# CSV to NumPy
+neurenix dataset convert data.csv data.npy --output-format npy
+```
+
+### 4. Create reproducible splits
+
+```bash
+neurenix dataset split full_data.csv \
+  --output splits \
+  --ratio 0.8,0.1,0.1 \
+  --shuffle \
+  --seed 42
+```
+
+### 5. Manage multiple datasets
+
+```bash
+# Register datasets
+neurenix dataset register train_data data/train.csv
+neurenix dataset register test_data data/test.csv
+
+# List all
+neurenix dataset list
+
+# Get info
+neurenix dataset info train_data
+```
+
+## Best Practices
+
+### 1. Always shuffle when splitting
+
+```bash
+neurenix dataset split data.csv --ratio 0.8,0.2 --shuffle --seed 42
+```
+
+### 2. Use consistent split ratios
+
+Standard splits:
+- **70/15/15**: Balanced three-way split
+- **80/20**: Simple train/val split
+- **80/10/10**: More training data
+
+```bash
+neurenix dataset split data.csv --ratio 0.7,0.15,0.15
+```
+
+### 3. Register datasets with metadata
+
+```bash
+neurenix dataset register my_dataset data.csv \
+  --metadata '{"version": "1.0", "date": "2024-01-15", "samples": 10000}'
+```
+
+### 4. Convert to efficient formats
+
+For large datasets, use efficient formats:
+
+```bash
+# Convert to Parquet for efficient storage
+neurenix dataset convert large_data.csv large_data.parquet \
+  --output-format parquet
+
+# Convert to HDF5 for numerical data
+neurenix dataset convert data.csv data.h5 --output-format hdf5
+```
+
+### 5. Organize dataset directories
+
+```bash
+mkdir -p datasets/{raw,processed,splits}
+
+# Download to raw
+neurenix dataset download cifar10 --output datasets/raw/cifar10.csv
+
+# Split to processed
+neurenix dataset split datasets/raw/cifar10.csv \
+  --output datasets/splits \
+  --ratio 0.8,0.1,0.1
+```
+
+## Integration Example
+
+Complete dataset preparation pipeline:
+
+```bash
+#!/bin/bash
+
+# 1. Register dataset
+neurenix dataset register my_data https://example.com/data.csv
+
+# 2. Download
+neurenix dataset download my_data --output data/raw/data.csv
+
+# 3. Convert to efficient format
+neurenix dataset convert \
+  data/raw/data.csv \
+  data/processed/data.parquet \
+  --output-format parquet
+
+# 4. Split for training
+neurenix dataset split \
+  data/processed/data.parquet \
+  --output data/splits \
+  --ratio 0.7,0.15,0.15 \
+  --shuffle \
+  --seed 42
+
+# 5. Preprocess
+neurenix preprocess \
+  --input data/splits/train \
+  --output data/ready/train \
+  --normalize
+
+echo "Dataset prepared and ready for training!"
+```
+
+## See Also
+
+- [Preprocess command](/cli/preprocess) - Preprocess downloaded datasets
+- [Init command](/cli/init) - Initialize projects with datasets
+- [Run command](/cli/run) - Train with prepared datasets

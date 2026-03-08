@@ -1,0 +1,297 @@
+---
+title: neurenix predict
+description: Make predictions using a trained model on new data
+---
+
+The `predict` command loads a trained model and generates predictions on new input data, with support for various output formats.
+
+## Usage
+
+```bash
+neurenix predict --model <model_file> --input <data_path> [options]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--model` | string | **required** | Path to the trained model file |
+| `--input` | string | **required** | Input data file or directory |
+| `--output` | string | `predictions.csv` | Output file for predictions |
+| `--batch-size` | integer | `32` | Batch size for prediction |
+| `--device` | string | `auto` | Device to use (`cpu`, `cuda`, `auto`) |
+| `--format` | string | auto | Output format (`csv`, `json`, `npy`) |
+
+## Output Formats
+
+The command supports multiple output formats:
+
+- **csv**: Comma-separated values (default)
+- **json**: JSON array format
+- **npy**: NumPy binary format (requires NumPy)
+
+If `--format` is not specified, the format is inferred from the output file extension.
+
+## Examples
+
+### Basic prediction
+
+```bash
+neurenix predict --model models/classifier.nrx --input data/test.csv
+```
+
+```
+Loading model from models/classifier.nrx...
+Loading input data from data/test.csv...
+Making predictions with batch size 32...
+Saving predictions to predictions.csv...
+Predictions saved to predictions.csv
+```
+
+### Predict with custom output
+
+```bash
+neurenix predict \
+  --model models/model.nrx \
+  --input data/new_data.csv \
+  --output results/predictions.csv
+```
+
+```
+Loading model from models/model.nrx...
+Loading input data from data/new_data.csv...
+Making predictions with batch size 32...
+Saving predictions to results/predictions.csv...
+Predictions saved to results/predictions.csv
+```
+
+### JSON output format
+
+```bash
+neurenix predict \
+  --model models/classifier.nrx \
+  --input data/test.csv \
+  --output predictions.json \
+  --format json
+```
+
+```
+Loading model from models/classifier.nrx...
+Loading input data from data/test.csv...
+Making predictions with batch size 32...
+Saving predictions to predictions.json...
+Predictions saved to predictions.json
+```
+
+### Large batch size for GPU
+
+```bash
+neurenix predict \
+  --model models/model.nrx \
+  --input data/large_dataset.csv \
+  --batch-size 256 \
+  --device cuda
+```
+
+```
+Loading model from models/model.nrx...
+Loading input data from data/large_dataset.csv...
+Making predictions with batch size 256...
+Saving predictions to predictions.csv...
+Predictions saved to predictions.csv
+```
+
+### NumPy output format
+
+```bash
+neurenix predict \
+  --model models/model.nrx \
+  --input data/images/ \
+  --output predictions.npy \
+  --format npy
+```
+
+```
+Loading model from models/model.nrx...
+Loading input data from data/images/...
+Making predictions with batch size 32...
+Saving predictions to predictions.npy...
+Predictions saved to predictions.npy
+```
+
+### CPU-only prediction
+
+```bash
+neurenix predict \
+  --model models/model.nrx \
+  --input data/test.csv \
+  --device cpu
+```
+
+## Input Data
+
+The `--input` parameter accepts:
+- **Single file**: CSV, JSON, or other supported formats
+- **Directory**: Loads all compatible files in the directory
+
+```bash
+# Single file
+neurenix predict --model model.nrx --input test_data.csv
+
+# Directory of images
+neurenix predict --model model.nrx --input images/test/
+```
+
+## Error Handling
+
+### Model not found
+
+```bash
+neurenix predict --model missing.nrx --input data.csv
+```
+
+```
+Error: Model file 'missing.nrx' not found.
+```
+
+### Input data not found
+
+```bash
+neurenix predict --model model.nrx --input missing.csv
+```
+
+```
+Error: Input 'missing.csv' not found.
+```
+
+### Prediction error
+
+```bash
+neurenix predict --model model.nrx --input incompatible_data.csv
+```
+
+```
+Loading model from model.nrx...
+Loading input data from incompatible_data.csv...
+Error making predictions: Input shape mismatch
+```
+
+## Batch Processing
+
+For large datasets, adjust batch size based on available memory:
+
+```bash
+# Small batch for CPU
+neurenix predict --model model.nrx --input large.csv --batch-size 16 --device cpu
+
+# Large batch for GPU
+neurenix predict --model model.nrx --input large.csv --batch-size 512 --device cuda
+```
+
+<Note>
+**Performance Tip**: Larger batch sizes generally provide better throughput on GPUs, while smaller batches may be necessary for CPU or limited memory scenarios.
+</Note>
+
+## Prediction Pipeline
+
+### 1. Load trained model
+
+```bash
+neurenix predict --model models/production_model.nrx --input new_data.csv
+```
+
+### 2. Make predictions
+
+The model processes input data in batches and generates predictions.
+
+### 3. Save results
+
+Predictions are saved in the specified format and location.
+
+## Best Practices
+
+### 1. Use appropriate batch sizes
+
+Match batch size to your hardware capabilities:
+
+```bash
+# CPU: smaller batches
+neurenix predict --model model.nrx --input data.csv --batch-size 32 --device cpu
+
+# GPU: larger batches
+neurenix predict --model model.nrx --input data.csv --batch-size 256 --device cuda
+```
+
+### 2. Choose the right output format
+
+```bash
+# CSV for tabular data
+neurenix predict --model model.nrx --input data.csv --format csv
+
+# JSON for structured output
+neurenix predict --model model.nrx --input data.csv --format json
+
+# NPY for numerical arrays
+neurenix predict --model model.nrx --input data.csv --format npy
+```
+
+### 3. Organize prediction outputs
+
+Store predictions in organized directories:
+
+```bash
+mkdir -p predictions/$(date +%Y%m%d)
+neurenix predict \
+  --model models/model.nrx \
+  --input data/batch_1.csv \
+  --output predictions/$(date +%Y%m%d)/batch_1_predictions.csv
+```
+
+### 4. Use auto device selection
+
+Let Neurenix choose the best available device:
+
+```bash
+neurenix predict --model model.nrx --input data.csv --device auto
+```
+
+## Integration Examples
+
+### Batch prediction script
+
+```bash
+#!/bin/bash
+for file in data/test_batch_*.csv; do
+  output="predictions/$(basename $file .csv)_pred.csv"
+  neurenix predict --model models/best.nrx --input $file --output $output
+done
+```
+
+### Python integration
+
+```python
+import subprocess
+import os
+
+def run_predictions(model_path, input_data, output_path):
+    cmd = [
+        "neurenix", "predict",
+        "--model", model_path,
+        "--input", input_data,
+        "--output", output_path,
+        "--device", "auto"
+    ]
+    subprocess.run(cmd, check=True)
+
+run_predictions(
+    "models/classifier.nrx",
+    "data/test.csv",
+    "results/predictions.csv"
+)
+```
+
+## See Also
+
+- [Eval command](/cli/eval) - Evaluate model performance
+- [Export command](/cli/export) - Export models for deployment
+- [Serve command](/cli/serve) - Serve models as API

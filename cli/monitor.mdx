@@ -1,0 +1,436 @@
+---
+title: neurenix monitor
+description: Monitor model training in real-time with metrics tracking and visualization
+---
+
+The `monitor` command provides real-time monitoring of model training progress, tracking metrics like loss and accuracy, with optional plot generation.
+
+## Usage
+
+```bash
+neurenix monitor [options]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--log-dir` | string | `logs` | Directory containing training logs |
+| `--refresh-rate` | float | `1.0` | Refresh rate in seconds |
+| `--metrics` | string | `loss,accuracy` | Metrics to display (comma-separated) |
+| `--output` | string | None | Output file for monitoring data |
+| `--plot` | flag | false | Generate plots for metrics |
+
+## Examples
+
+### Basic monitoring
+
+```bash
+neurenix monitor
+```
+
+```
+Monitoring training logs in 'logs'...
+Metrics: loss, accuracy
+Refresh rate: 1.0 seconds
+
+Press Ctrl+C to stop monitoring.
+
+Epoch 1:
+  loss: 0.6234
+  accuracy: 0.7812
+
+Epoch 2:
+  loss: 0.5123
+  accuracy: 0.8234
+
+Epoch 3:
+  loss: 0.4567
+  accuracy: 0.8456
+...
+```
+
+### Monitor specific metrics
+
+```bash
+neurenix monitor --metrics loss,accuracy,val_loss,val_accuracy
+```
+
+```
+Monitoring training logs in 'logs'...
+Metrics: loss, accuracy, val_loss, val_accuracy
+Refresh rate: 1.0 seconds
+
+Press Ctrl+C to stop monitoring.
+
+Epoch 1:
+  loss: 0.6234
+  accuracy: 0.7812
+  val_loss: 0.6543
+  val_accuracy: 0.7656
+...
+```
+
+### Custom log directory
+
+```bash
+neurenix monitor --log-dir experiments/run_1/logs
+```
+
+```
+Monitoring training logs in 'experiments/run_1/logs'...
+Metrics: loss, accuracy
+Refresh rate: 1.0 seconds
+
+Press Ctrl+C to stop monitoring.
+...
+```
+
+### Faster refresh rate
+
+```bash
+neurenix monitor --refresh-rate 0.5
+```
+
+```
+Monitoring training logs in 'logs'...
+Metrics: loss, accuracy
+Refresh rate: 0.5 seconds
+
+Press Ctrl+C to stop monitoring.
+...
+```
+
+### Save monitoring data
+
+```bash
+neurenix monitor --output monitoring_data.csv
+```
+
+```
+Monitoring training logs in 'logs'...
+Metrics: loss, accuracy
+Refresh rate: 1.0 seconds
+
+Press Ctrl+C to stop monitoring.
+
+Epoch 1:
+  loss: 0.6234
+  accuracy: 0.7812
+...
+
+Stopping monitoring...
+```
+
+This creates `monitoring_data.csv`:
+```csv
+epoch,loss,accuracy
+1,0.6234,0.7812
+2,0.5123,0.8234
+3,0.4567,0.8456
+```
+
+### Generate plots
+
+```bash
+neurenix monitor --plot
+```
+
+```
+Monitoring training logs in 'logs'...
+Metrics: loss, accuracy
+Refresh rate: 1.0 seconds
+
+Press Ctrl+C to stop monitoring.
+
+Epoch 1:
+  loss: 0.6234
+  accuracy: 0.7812
+...
+
+Stopping monitoring...
+Plots saved to logs/plots
+```
+
+### Complete monitoring setup
+
+```bash
+neurenix monitor \
+  --log-dir experiments/model_v1/logs \
+  --metrics loss,accuracy,val_loss,val_accuracy,lr \
+  --refresh-rate 2.0 \
+  --output monitoring.csv \
+  --plot
+```
+
+## Log File Format
+
+The monitor command reads JSON log files in the log directory:
+
+```json
+{
+  "epoch": 1,
+  "loss": 0.6234,
+  "accuracy": 0.7812,
+  "val_loss": 0.6543,
+  "val_accuracy": 0.7656,
+  "lr": 0.001
+}
+```
+
+## Plot Generation
+
+When `--plot` is enabled, individual plots are generated for each metric:
+
+```
+logs/plots/
+├── loss_plot.png
+├── accuracy_plot.png
+├── val_loss_plot.png
+└── val_accuracy_plot.png
+```
+
+Each plot shows the metric value versus epoch number.
+
+<Note>
+**Requirement**: Plot generation requires matplotlib. Install with: `pip install matplotlib`
+</Note>
+
+## Real-time Monitoring Workflow
+
+### Terminal 1: Start training
+
+```bash
+neurenix run train.py --epochs 100
+```
+
+### Terminal 2: Monitor progress
+
+```bash
+neurenix monitor --refresh-rate 1.0 --plot
+```
+
+Press `Ctrl+C` when training completes to save plots.
+
+## Error Handling
+
+### Log directory not found
+
+```bash
+neurenix monitor --log-dir missing_logs
+```
+
+```
+Error: Log directory 'missing_logs' not found.
+```
+
+### No log files
+
+```bash
+neurenix monitor
+```
+
+```
+Monitoring training logs in 'logs'...
+Metrics: loss, accuracy
+Refresh rate: 1.0 seconds
+
+Press Ctrl+C to stop monitoring.
+
+No log files found. Waiting for logs...
+No log files found. Waiting for logs...
+...
+```
+
+### Matplotlib not available
+
+```bash
+neurenix monitor --plot
+```
+
+```
+...
+Stopping monitoring...
+Warning: matplotlib not available. Plots not generated.
+```
+
+## Use Cases
+
+### 1. Track long training runs
+
+Monitor training that takes hours or days:
+
+```bash
+# Terminal 1
+neurenix run train.py --epochs 200
+
+# Terminal 2
+neurenix monitor --refresh-rate 5.0 --output training_log.csv
+```
+
+### 2. Compare multiple metrics
+
+Track training and validation metrics simultaneously:
+
+```bash
+neurenix monitor \
+  --metrics loss,val_loss,accuracy,val_accuracy \
+  --refresh-rate 1.0
+```
+
+### 3. Save training history
+
+Export metrics for later analysis:
+
+```bash
+neurenix monitor \
+  --output experiments/model_v1/metrics.csv \
+  --plot
+```
+
+### 4. Monitor learning rate schedules
+
+Track learning rate changes during training:
+
+```bash
+neurenix monitor --metrics loss,accuracy,lr
+```
+
+### 5. Remote training monitoring
+
+Monitor training on a remote server:
+
+```bash
+# On remote server
+neurenix run train.py
+
+# Via SSH from local machine
+ssh user@server "cd project && neurenix monitor --output -" | tee local_monitor.csv
+```
+
+## Best Practices
+
+### 1. Monitor multiple metrics
+
+Track both training and validation metrics:
+
+```bash
+neurenix monitor \
+  --metrics loss,accuracy,val_loss,val_accuracy
+```
+
+### 2. Save monitoring data
+
+Always save metrics for later analysis:
+
+```bash
+neurenix monitor \
+  --output experiments/$(date +%Y%m%d)/metrics.csv \
+  --plot
+```
+
+### 3. Adjust refresh rate based on epoch time
+
+```bash
+# Fast epochs (< 10 seconds)
+neurenix monitor --refresh-rate 1.0
+
+# Medium epochs (10-60 seconds)
+neurenix monitor --refresh-rate 5.0
+
+# Slow epochs (> 60 seconds)
+neurenix monitor --refresh-rate 15.0
+```
+
+### 4. Generate plots for presentations
+
+```bash
+neurenix monitor \
+  --metrics loss,val_loss \
+  --plot \
+  --output final_metrics.csv
+```
+
+### 5. Use descriptive output paths
+
+```bash
+neurenix monitor \
+  --log-dir experiments/resnet50_run1/logs \
+  --output experiments/resnet50_run1/metrics.csv
+```
+
+## Integration Examples
+
+### Monitoring script
+
+```bash
+#!/bin/bash
+
+# Start training in background
+neurenix run train.py --epochs 100 &
+TRAIN_PID=$!
+
+# Monitor training
+neurenix monitor \
+  --metrics loss,accuracy,val_loss,val_accuracy \
+  --output metrics.csv \
+  --plot
+
+# Wait for training to complete
+wait $TRAIN_PID
+
+echo "Training completed. Metrics saved to metrics.csv"
+```
+
+### Python integration
+
+```python
+import subprocess
+import threading
+
+def monitor_training(log_dir, output_file):
+    cmd = [
+        "neurenix", "monitor",
+        "--log-dir", log_dir,
+        "--output", output_file,
+        "--plot"
+    ]
+    subprocess.run(cmd)
+
+# Start monitoring in separate thread
+monitor_thread = threading.Thread(
+    target=monitor_training,
+    args=("logs", "metrics.csv")
+)
+monitor_thread.start()
+
+# Start training
+subprocess.run(["neurenix", "run", "train.py"])
+
+# Wait for monitoring to finish
+monitor_thread.join()
+```
+
+## Keyboard Controls
+
+- **Ctrl+C**: Stop monitoring and save data/plots
+
+## Output Files
+
+Monitoring can generate several output files:
+
+```
+.
+├── monitoring_data.csv          # Metrics CSV (if --output specified)
+└── logs/plots/                  # Generated plots (if --plot enabled)
+    ├── loss_plot.png
+    ├── accuracy_plot.png
+    ├── val_loss_plot.png
+    └── val_accuracy_plot.png
+```
+
+## See Also
+
+- [Run command](/cli/run) - Start training to monitor
+- [Eval command](/cli/eval) - Evaluate trained models
+- [Hardware command](/cli/hardware) - Monitor hardware usage

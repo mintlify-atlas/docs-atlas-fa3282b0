@@ -1,0 +1,387 @@
+---
+title: neurenix hardware
+description: Manage hardware settings including device selection and benchmarking
+---
+
+The `hardware` command provides tools for managing hardware configurations, including listing available devices, auto-selecting optimal hardware, and benchmarking performance.
+
+## Usage
+
+```bash
+neurenix hardware [action] [options]
+```
+
+## Actions
+
+| Action | Description |
+|--------|-------------|
+| `list` | List all available hardware devices (default) |
+| `info` | Show current device information |
+| `auto` | Auto-select optimal hardware |
+| `select` | Manually select a specific device |
+| `benchmark` | Benchmark available devices |
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--device` | string | None | Device to select (required for `select` action) |
+| `--precision` | string | `float32` | Precision (`float32`, `float16`, `mixed`, `int8`) |
+| `--memory-limit` | float | None | Memory limit in GB |
+
+## Actions in Detail
+
+### list - List Available Devices
+
+Displays all available hardware devices with their specifications.
+
+```bash
+neurenix hardware list
+```
+
+```
+Available hardware devices:
+1. NVIDIA GeForce RTX 3090 (cuda)
+   - Memory: 24.0 GB
+   - Compute capability: 8.6
+   - Supported precisions: float32, float16, mixed, int8
+
+2. Intel Core i9-12900K (cpu)
+   - Memory: 64.0 GB
+   - Compute capability: N/A
+   - Supported precisions: float32, float16
+```
+
+### info - Current Device Information
+
+Shows detailed information about the currently selected device.
+
+```bash
+neurenix hardware info
+```
+
+```
+Current device information:
+Name: NVIDIA GeForce RTX 3090
+Type: cuda
+Memory: 24.0 GB
+Compute capability: 8.6
+Current precision: float32
+Memory usage: 2.3 / 24.0 GB
+```
+
+### auto - Auto-Select Optimal Device
+
+Automatically selects the best available hardware based on capabilities.
+
+```bash
+neurenix hardware auto
+```
+
+```
+Auto-selecting optimal hardware...
+Selected device: NVIDIA GeForce RTX 3090 (cuda)
+Memory: 24.0 GB
+Precision: float32
+Updated configuration in config.json
+```
+
+### select - Manually Select Device
+
+Manually choose a specific device.
+
+```bash
+neurenix hardware select --device cuda:0
+```
+
+```
+Selecting hardware: cuda:0
+Selected device: NVIDIA GeForce RTX 3090 (cuda)
+Memory: 24.0 GB
+Precision: float32
+Updated configuration in config.json
+```
+
+### benchmark - Benchmark Devices
+
+Run performance benchmarks on all available devices.
+
+```bash
+neurenix hardware benchmark
+```
+
+```
+Benchmarking available hardware...
+
+Benchmark Results:
+
+NVIDIA GeForce RTX 3090:
+  - Inference time: 2.3456 ms
+  - Training time: 12.5432 ms
+  - Memory usage: 3.45 GB
+  - Throughput: 856.32 samples/sec
+
+Intel Core i9-12900K:
+  - Inference time: 45.6789 ms
+  - Training time: 234.5678 ms
+  - Memory usage: 2.12 GB
+  - Throughput: 42.67 samples/sec
+
+Recommended device: NVIDIA GeForce RTX 3090
+```
+
+## Examples
+
+### List available hardware
+
+```bash
+neurenix hardware list
+```
+
+### Auto-select with mixed precision
+
+```bash
+neurenix hardware auto --precision mixed
+```
+
+```
+Auto-selecting optimal hardware...
+Selected device: NVIDIA GeForce RTX 3090 (cuda)
+Memory: 24.0 GB
+Precision: mixed
+Updated configuration in config.json
+```
+
+### Select specific GPU
+
+```bash
+neurenix hardware select --device cuda:1 --precision float16
+```
+
+```
+Selecting hardware: cuda:1
+Selected device: NVIDIA GeForce RTX 3080 (cuda)
+Memory: 10.0 GB
+Precision: float16
+Updated configuration in config.json
+```
+
+### Select CPU with memory limit
+
+```bash
+neurenix hardware select --device cpu --memory-limit 16.0
+```
+
+```
+Selecting hardware: cpu
+Selected device: Intel Core i9-12900K (cpu)
+Memory: 64.0 GB
+Precision: float32
+Updated configuration in config.json
+```
+
+### Benchmark with specific precision
+
+```bash
+neurenix hardware benchmark --precision float16
+```
+
+```
+Benchmarking available hardware...
+
+Benchmark Results:
+
+NVIDIA GeForce RTX 3090:
+  - Inference time: 1.2345 ms
+  - Training time: 6.7890 ms
+  - Memory usage: 1.89 GB
+  - Throughput: 1624.56 samples/sec
+
+Recommended device: NVIDIA GeForce RTX 3090
+```
+
+## Precision Modes
+
+### float32 (Default)
+
+Standard 32-bit floating point precision:
+- Highest accuracy
+- More memory usage
+- Slower computation
+
+```bash
+neurenix hardware select --device cuda:0 --precision float32
+```
+
+### float16
+
+Half-precision floating point:
+- Good accuracy
+- Reduced memory usage
+- Faster computation on modern GPUs
+
+```bash
+neurenix hardware select --device cuda:0 --precision float16
+```
+
+### mixed
+
+Mixed precision training:
+- Combines float32 and float16
+- Best balance of speed and accuracy
+- Recommended for modern GPUs
+
+```bash
+neurenix hardware auto --precision mixed
+```
+
+### int8
+
+8-bit integer quantization:
+- Lower accuracy
+- Minimal memory usage
+- Fastest inference
+- Best for deployment
+
+```bash
+neurenix hardware select --device cuda:0 --precision int8
+```
+
+## Configuration Updates
+
+When using `auto` or `select` actions, the hardware settings are automatically saved to `config.json`:
+
+```json
+{
+  "hardware": {
+    "device": "cuda:0",
+    "precision": "mixed"
+  }
+}
+```
+
+## Use Cases
+
+### 1. Initial setup
+
+Auto-select optimal hardware when starting a new project:
+
+```bash
+neurenix init --name my-project
+cd my-project
+neurenix hardware auto
+```
+
+### 2. Multi-GPU selection
+
+Select a specific GPU in multi-GPU systems:
+
+```bash
+neurenix hardware list
+neurenix hardware select --device cuda:1
+```
+
+### 3. Performance optimization
+
+Benchmark devices to find the best option:
+
+```bash
+neurenix hardware benchmark --precision mixed
+neurenix hardware select --device cuda:0 --precision mixed
+```
+
+### 4. Resource-constrained training
+
+Limit memory usage for shared systems:
+
+```bash
+neurenix hardware select --device cuda:0 --memory-limit 8.0 --precision float16
+```
+
+### 5. CPU fallback
+
+Switch to CPU when GPU is unavailable:
+
+```bash
+neurenix hardware select --device cpu
+```
+
+## Error Handling
+
+### No GPU available
+
+```bash
+neurenix hardware select --device cuda:0
+```
+
+```
+Error managing hardware: No CUDA devices available
+```
+
+### Invalid device
+
+```bash
+neurenix hardware select --device invalid
+```
+
+```
+Error managing hardware: Device 'invalid' not found
+```
+
+### Missing required option
+
+```bash
+neurenix hardware select
+```
+
+```
+Error: --device is required for 'select' action.
+```
+
+## Best Practices
+
+### 1. Use auto-selection for new projects
+
+```bash
+neurenix hardware auto --precision mixed
+```
+
+### 2. Benchmark before production
+
+Test different configurations to find the optimal setup:
+
+```bash
+neurenix hardware benchmark --precision float32
+neurenix hardware benchmark --precision float16
+neurenix hardware benchmark --precision mixed
+```
+
+### 3. Monitor device information
+
+Regularly check device utilization:
+
+```bash
+neurenix hardware info
+```
+
+### 4. Use mixed precision on modern GPUs
+
+For GPUs with Tensor Cores (NVIDIA Volta, Turing, Ampere):
+
+```bash
+neurenix hardware select --device cuda:0 --precision mixed
+```
+
+### 5. Document hardware configurations
+
+Keep track of hardware settings in your experiments:
+
+```bash
+neurenix hardware info > experiment_logs/hardware_config.txt
+```
+
+## See Also
+
+- [Run command](/cli/run) - Train with selected hardware
+- [Optimize command](/cli/optimize) - Optimize for specific hardware
+- [Monitor command](/cli/monitor) - Monitor hardware usage during training

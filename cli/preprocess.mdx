@@ -1,0 +1,422 @@
+---
+title: neurenix preprocess
+description: Preprocess input data for model training with various transformations
+---
+
+The `preprocess` command transforms raw input data into a format suitable for model training, with support for normalization, resizing, augmentation, and dataset splitting.
+
+## Usage
+
+```bash
+neurenix preprocess --input <data_path> --output <output_path> [options]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--input` | string | **required** | Input data file or directory |
+| `--output` | string | **required** | Output directory for processed data |
+| `--config` | string | None | Preprocessing configuration file |
+| `--normalize` | flag | false | Normalize data |
+| `--resize` | string | None | Resize images to WxH (e.g., `224x224`) |
+| `--augment` | flag | false | Apply data augmentation |
+| `--split` | string | None | Split data into train/val/test (e.g., `0.7,0.15,0.15`) |
+
+## Examples
+
+### Basic preprocessing
+
+```bash
+neurenix preprocess --input data/raw --output data/processed
+```
+
+```
+Loading data from data/raw...
+Preprocessing data...
+Saving processed data (1000 samples)...
+Preprocessing completed successfully. Results saved to data/processed
+```
+
+### Normalize data
+
+```bash
+neurenix preprocess \
+  --input data/raw.csv \
+  --output data/normalized \
+  --normalize
+```
+
+```
+Loading data from data/raw.csv...
+Preprocessing data...
+Saving processed data (1000 samples)...
+Preprocessing completed successfully. Results saved to data/normalized
+```
+
+### Resize images
+
+```bash
+neurenix preprocess \
+  --input images/raw \
+  --output images/processed \
+  --resize 224x224
+```
+
+```
+Loading data from images/raw...
+Preprocessing data...
+Saving processed data (5000 samples)...
+Preprocessing completed successfully. Results saved to images/processed
+```
+
+### Apply data augmentation
+
+```bash
+neurenix preprocess \
+  --input data/train \
+  --output data/augmented \
+  --augment
+```
+
+```
+Loading data from data/train...
+Preprocessing data...
+Saving processed data (1500 samples)...
+Preprocessing completed successfully. Results saved to data/augmented
+```
+
+### Split dataset
+
+```bash
+neurenix preprocess \
+  --input data/full_dataset.csv \
+  --output data/splits \
+  --split 0.7,0.15,0.15
+```
+
+```
+Loading data from data/full_dataset.csv...
+Preprocessing data...
+Saving training data (700 samples)...
+Saving validation data (150 samples)...
+Saving test data (150 samples)...
+Preprocessing completed successfully. Results saved to data/splits
+```
+
+### Combined preprocessing
+
+```bash
+neurenix preprocess \
+  --input images/raw \
+  --output images/ready \
+  --resize 224x224 \
+  --normalize \
+  --augment \
+  --split 0.8,0.2
+```
+
+```
+Loading data from images/raw...
+Preprocessing data...
+Saving training data (4000 samples)...
+Saving validation data (1000 samples)...
+Preprocessing completed successfully. Results saved to images/ready
+```
+
+### Use configuration file
+
+```bash
+neurenix preprocess \
+  --input data/raw \
+  --output data/processed \
+  --config configs/preprocess.json
+```
+
+```
+Loading data from data/raw...
+Preprocessing data...
+Saving processed data (1000 samples)...
+Preprocessing completed successfully. Results saved to data/processed
+```
+
+## Configuration File
+
+Create a JSON configuration file for complex preprocessing pipelines:
+
+```json
+{
+  "normalize": true,
+  "resize": {
+    "width": 224,
+    "height": 224
+  },
+  "augment": {
+    "rotation": 15,
+    "flip_horizontal": true,
+    "brightness": 0.2,
+    "contrast": 0.2
+  },
+  "split": [0.7, 0.15, 0.15]
+}
+```
+
+Then use it:
+
+```bash
+neurenix preprocess \
+  --input data/raw \
+  --output data/processed \
+  --config preprocess_config.json
+```
+
+## Data Splitting
+
+When using `--split`, the data is divided into separate directories:
+
+### Two-way split (train/val)
+
+```bash
+neurenix preprocess --input data.csv --output data --split 0.8,0.2
+```
+
+Creates:
+```
+data/
+├── train/
+│   └── train_data.csv
+└── val/
+    └── val_data.csv
+```
+
+### Three-way split (train/val/test)
+
+```bash
+neurenix preprocess --input data.csv --output data --split 0.7,0.15,0.15
+```
+
+Creates:
+```
+data/
+├── train/
+│   └── train_data.csv
+├── val/
+│   └── val_data.csv
+└── test/
+    └── test_data.csv
+```
+
+<Note>
+Split ratios must sum to 1.0. For example: `0.8,0.2` or `0.7,0.15,0.15`
+</Note>
+
+## Preprocessing Configuration Output
+
+The preprocessing settings are saved to `preprocess_config.json` in the output directory:
+
+```json
+{
+  "normalize": true,
+  "resize": {
+    "width": 224,
+    "height": 224
+  },
+  "augment": true,
+  "split": [0.8, 0.2]
+}
+```
+
+This allows you to reproduce the preprocessing pipeline later.
+
+## Error Handling
+
+### Input not found
+
+```bash
+neurenix preprocess --input missing.csv --output data
+```
+
+```
+Error: Input 'missing.csv' not found.
+```
+
+### Invalid resize format
+
+```bash
+neurenix preprocess --input data --output out --resize invalid
+```
+
+```
+Error: Invalid resize format. Use WxH (e.g., 224x224).
+```
+
+### Invalid split ratio
+
+```bash
+neurenix preprocess --input data --output out --split 0.5,0.3
+```
+
+```
+Error: Invalid split format. Use comma-separated values that sum to 1.0 (e.g., 0.7,0.15,0.15).
+```
+
+### Preprocessing error
+
+```bash
+neurenix preprocess --input corrupted.csv --output out
+```
+
+```
+Loading data from corrupted.csv...
+Error preprocessing data: Failed to parse input data
+```
+
+## Use Cases
+
+### 1. Prepare images for training
+
+```bash
+neurenix preprocess \
+  --input raw_images/ \
+  --output processed_images/ \
+  --resize 224x224 \
+  --normalize \
+  --split 0.8,0.1,0.1
+```
+
+### 2. Augment training data
+
+```bash
+neurenix preprocess \
+  --input data/train \
+  --output data/train_augmented \
+  --augment
+```
+
+### 3. Create train/val/test splits
+
+```bash
+neurenix preprocess \
+  --input full_dataset.csv \
+  --output dataset_splits \
+  --split 0.7,0.2,0.1
+```
+
+### 4. Standardize dataset
+
+```bash
+neurenix preprocess \
+  --input raw_data.csv \
+  --output standardized_data \
+  --normalize
+```
+
+### 5. Complex pipeline with config
+
+```bash
+# Create config file with all settings
+cat > preprocess.json << EOF
+{
+  "normalize": true,
+  "resize": {"width": 256, "height": 256},
+  "augment": true,
+  "split": [0.7, 0.15, 0.15]
+}
+EOF
+
+# Run preprocessing
+neurenix preprocess \
+  --input images/ \
+  --output processed/ \
+  --config preprocess.json
+```
+
+## Best Practices
+
+### 1. Always split your data
+
+Create proper train/val/test splits:
+
+```bash
+neurenix preprocess \
+  --input data.csv \
+  --output splits \
+  --split 0.7,0.15,0.15
+```
+
+### 2. Use configuration files for reproducibility
+
+Store preprocessing settings in version control:
+
+```bash
+neurenix preprocess \
+  --input data \
+  --output processed \
+  --config preprocessing/experiment1.json
+```
+
+### 3. Normalize numerical data
+
+Always normalize for better training performance:
+
+```bash
+neurenix preprocess --input data.csv --output norm_data --normalize
+```
+
+### 4. Resize images consistently
+
+Use standard image sizes for vision models:
+
+```bash
+# ResNet/VGG
+neurenix preprocess --input images --output resized --resize 224x224
+
+# Inception
+neurenix preprocess --input images --output resized --resize 299x299
+```
+
+### 5. Augment only training data
+
+Split first, then augment only the training set:
+
+```bash
+# Split data
+neurenix preprocess --input data --output splits --split 0.8,0.2
+
+# Augment training data only
+neurenix preprocess \
+  --input splits/train \
+  --output splits/train_augmented \
+  --augment
+```
+
+## Pipeline Example
+
+Complete preprocessing pipeline for image classification:
+
+```bash
+#!/bin/bash
+
+# 1. Preprocess and split
+neurenix preprocess \
+  --input raw_images/ \
+  --output data/ \
+  --resize 224x224 \
+  --normalize \
+  --split 0.7,0.15,0.15
+
+# 2. Augment training data
+neurenix preprocess \
+  --input data/train \
+  --output data/train_augmented \
+  --augment
+
+# 3. Train model
+neurenix run train.py --config config.json
+```
+
+## See Also
+
+- [Dataset command](/cli/dataset) - Manage datasets
+- [Run command](/cli/run) - Train with preprocessed data
+- [Init command](/cli/init) - Initialize projects with data structure

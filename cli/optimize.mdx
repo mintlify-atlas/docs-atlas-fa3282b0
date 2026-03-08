@@ -1,0 +1,452 @@
+---
+title: neurenix optimize
+description: Optimize models using quantization, pruning, distillation, and hyperparameter tuning
+---
+
+The `optimize` command improves model performance by applying optimization techniques such as quantization, pruning, knowledge distillation, and hyperparameter tuning.
+
+## Usage
+
+```bash
+neurenix optimize --model <model_file> [options]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--model` | string | **required** | Path to the model file |
+| `--output` | string | auto | Output file for optimized model |
+| `--technique` | string | `auto` | Optimization technique |
+| `--quantize` | string | None | Quantization precision (`int8`, `fp16`, `fp8`) |
+| `--prune` | float | None | Pruning level (0.0 to 1.0) |
+| `--data` | string | None | Calibration data for optimization |
+| `--config` | string | None | Optimization configuration file |
+| `--device` | string | `auto` | Device to use for optimization |
+
+## Optimization Techniques
+
+| Technique | Description |
+|-----------|-------------|
+| `quantize` | Reduce precision to int8, fp16, or fp8 |
+| `prune` | Remove less important weights |
+| `distill` | Transfer knowledge to smaller model |
+| `hyperparameter` | Tune hyperparameters automatically |
+| `auto` | Automatically select best technique |
+
+## Examples
+
+### Auto optimization
+
+```bash
+neurenix optimize --model models/classifier.nrx
+```
+
+```
+Loading model from models/classifier.nrx...
+Optimizing model using auto technique...
+Saving optimized model to models/classifier_optimized.nrx...
+
+Optimization Results:
+model_size_reduction: 0.45
+inference_speedup: 2.3x
+accuracy_change: -0.002
+
+Model successfully optimized and saved to models/classifier_optimized.nrx
+```
+
+### Quantize to int8
+
+```bash
+neurenix optimize \
+  --model models/model.nrx \
+  --technique quantize \
+  --quantize int8
+```
+
+```
+Loading model from models/model.nrx...
+Optimizing model using quantize technique...
+Saving optimized model to models/model_int8.nrx...
+
+Optimization Results:
+model_size: 24.5 MB -> 6.2 MB
+inference_time: 12.3ms -> 3.8ms
+accuracy: 0.923 -> 0.918
+
+Model successfully optimized and saved to models/model_int8.nrx
+```
+
+### Quantize to fp16
+
+```bash
+neurenix optimize \
+  --model models/large_model.nrx \
+  --quantize fp16 \
+  --output models/large_model_fp16.nrx
+```
+
+```
+Loading model from models/large_model.nrx...
+Optimizing model using auto technique...
+Saving optimized model to models/large_model_fp16.nrx...
+
+Optimization Results:
+model_size_reduction: 0.5
+inference_speedup: 1.8x
+accuracy_change: -0.001
+
+Model successfully optimized and saved to models/large_model_fp16.nrx
+```
+
+### Prune model
+
+```bash
+neurenix optimize \
+  --model models/model.nrx \
+  --technique prune \
+  --prune 0.3
+```
+
+```
+Loading model from models/model.nrx...
+Optimizing model using prune technique...
+Saving optimized model to models/model_pruned_30.nrx...
+
+Optimization Results:
+weights_removed: 30%
+model_size_reduction: 0.25
+inference_speedup: 1.4x
+accuracy_change: -0.015
+
+Model successfully optimized and saved to models/model_pruned_30.nrx
+```
+
+### Optimize with calibration data
+
+```bash
+neurenix optimize \
+  --model models/model.nrx \
+  --technique quantize \
+  --quantize int8 \
+  --data data/calibration.csv
+```
+
+```
+Loading model from models/model.nrx...
+Loading calibration data from data/calibration.csv...
+Optimizing model using quantize technique...
+Saving optimized model to models/model_int8.nrx...
+
+Optimization Results:
+model_size_reduction: 0.75
+inference_speedup: 3.2x
+accuracy_change: -0.005
+
+Model successfully optimized and saved to models/model_int8.nrx
+```
+
+### Use configuration file
+
+```bash
+neurenix optimize \
+  --model models/model.nrx \
+  --config configs/optimize.json
+```
+
+```
+Loading model from models/model.nrx...
+Optimizing model using quantize technique...
+Saving optimized model to models/model_optimized.nrx...
+
+Optimization Results:
+model_size_reduction: 0.6
+inference_speedup: 2.5x
+accuracy_change: -0.008
+
+Model successfully optimized and saved to models/model_optimized.nrx
+```
+
+## Configuration File
+
+Create a JSON configuration for complex optimization:
+
+```json
+{
+  "technique": "quantize",
+  "quantize": "int8",
+  "calibration": {
+    "samples": 1000,
+    "method": "percentile"
+  },
+  "validation": {
+    "min_accuracy": 0.90
+  }
+}
+```
+
+Then use it:
+
+```bash
+neurenix optimize --model model.nrx --config optimize_config.json
+```
+
+## Quantization Precision
+
+### int8 (8-bit Integer)
+
+- **Best for**: Edge deployment, mobile devices
+- **Size reduction**: ~75%
+- **Speed improvement**: 2-4x
+- **Accuracy loss**: 1-3%
+
+```bash
+neurenix optimize --model model.nrx --quantize int8
+```
+
+### fp16 (16-bit Float)
+
+- **Best for**: GPU deployment
+- **Size reduction**: ~50%
+- **Speed improvement**: 1.5-2x
+- **Accuracy loss**: less than 1%
+
+```bash
+neurenix optimize --model model.nrx --quantize fp16
+```
+
+### fp8 (8-bit Float)
+
+- **Best for**: Modern GPUs (H100, A100)
+- **Size reduction**: ~75%
+- **Speed improvement**: 2-3x
+- **Accuracy loss**: less than 2%
+
+```bash
+neurenix optimize --model model.nrx --quantize fp8
+```
+
+## Pruning Levels
+
+| Level | Pruning | Use Case |
+|-------|---------|----------|
+| 0.1 | 10% | Minimal optimization |
+| 0.3 | 30% | Balanced optimization |
+| 0.5 | 50% | Aggressive optimization |
+| 0.7 | 70% | Maximum optimization |
+
+```bash
+# Light pruning
+neurenix optimize --model model.nrx --prune 0.1
+
+# Aggressive pruning
+neurenix optimize --model model.nrx --prune 0.5
+```
+
+<Warning>
+Higher pruning levels (>0.5) may significantly impact model accuracy. Always validate performance after pruning.
+</Warning>
+
+## Optimization Results
+
+The command outputs detailed optimization metrics:
+
+```
+Optimization Results:
+model_size: 245.3 MB -> 61.2 MB (75% reduction)
+inference_time: 45.6ms -> 12.3ms (3.7x speedup)
+accuracy: 0.934 -> 0.928 (0.6% decrease)
+throughput: 22 samples/sec -> 81 samples/sec
+```
+
+## Error Handling
+
+### Model not found
+
+```bash
+neurenix optimize --model missing.nrx
+```
+
+```
+Error: Model file 'missing.nrx' not found.
+```
+
+### Invalid quantization precision
+
+```bash
+neurenix optimize --model model.nrx --quantize invalid
+```
+
+```
+Error: Invalid quantization precision. Choose from: int8, fp16, fp8
+```
+
+### Invalid pruning level
+
+```bash
+neurenix optimize --model model.nrx --prune 1.5
+```
+
+```
+Error: Pruning level must be between 0.0 and 1.0
+```
+
+### Optimization failed
+
+```bash
+neurenix optimize --model model.nrx --quantize int8
+```
+
+```
+Loading model from model.nrx...
+Error optimizing model: Quantization failed - model architecture not supported
+```
+
+## Use Cases
+
+### 1. Deploy to mobile devices
+
+```bash
+neurenix optimize \
+  --model models/production.nrx \
+  --quantize int8 \
+  --data data/calibration.csv \
+  --output models/mobile.nrx
+```
+
+### 2. Reduce inference costs
+
+```bash
+neurenix optimize \
+  --model models/large_model.nrx \
+  --quantize fp16 \
+  --output models/efficient.nrx
+```
+
+### 3. Speed up real-time inference
+
+```bash
+neurenix optimize \
+  --model models/detector.nrx \
+  --technique quantize \
+  --quantize int8 \
+  --device cuda
+```
+
+### 4. Compress models for storage
+
+```bash
+neurenix optimize \
+  --model models/checkpoint.nrx \
+  --prune 0.4 \
+  --output models/compressed.nrx
+```
+
+### 5. Automated optimization pipeline
+
+```bash
+# Try different optimization strategies
+for technique in quantize prune auto; do
+  neurenix optimize \
+    --model models/base.nrx \
+    --technique $technique \
+    --output models/optimized_${technique}.nrx
+done
+```
+
+## Best Practices
+
+### 1. Use calibration data
+
+Provide representative data for better quantization:
+
+```bash
+neurenix optimize \
+  --model model.nrx \
+  --quantize int8 \
+  --data data/representative_samples.csv
+```
+
+### 2. Start with conservative settings
+
+Begin with less aggressive optimization:
+
+```bash
+# Start with fp16
+neurenix optimize --model model.nrx --quantize fp16
+
+# If accuracy is acceptable, try int8
+neurenix optimize --model model.nrx --quantize int8
+```
+
+### 3. Validate after optimization
+
+Always check model performance:
+
+```bash
+# Optimize
+neurenix optimize --model model.nrx --output optimized.nrx
+
+# Validate
+neurenix eval --model optimized.nrx --data data/test.csv
+```
+
+### 4. Keep original model
+
+Never overwrite your original model:
+
+```bash
+# Good: explicit output
+neurenix optimize --model model.nrx --output model_optimized.nrx
+
+# Bad: might overwrite (don't do this)
+# neurenix optimize --model model.nrx --output model.nrx
+```
+
+### 5. Document optimization settings
+
+Save optimization configuration:
+
+```bash
+cat > optimize_config.json << EOF
+{
+  "technique": "quantize",
+  "quantize": "int8",
+  "notes": "Optimized for mobile deployment"
+}
+EOF
+
+neurenix optimize --model model.nrx --config optimize_config.json
+```
+
+## Optimization Workflow
+
+```bash
+#!/bin/bash
+
+# 1. Train model
+neurenix run train.py
+
+# 2. Evaluate baseline
+neurenix eval --model models/model.nrx --data data/test.csv > baseline.txt
+
+# 3. Optimize
+neurenix optimize \
+  --model models/model.nrx \
+  --quantize int8 \
+  --data data/calibration.csv \
+  --output models/model_int8.nrx
+
+# 4. Evaluate optimized
+neurenix eval --model models/model_int8.nrx --data data/test.csv > optimized.txt
+
+# 5. Compare results
+diff baseline.txt optimized.txt
+```
+
+## See Also
+
+- [Export command](/cli/export) - Export optimized models
+- [Eval command](/cli/eval) - Validate optimization results
+- [Hardware command](/cli/hardware) - Select optimization device
+- [Serve command](/cli/serve) - Deploy optimized models
