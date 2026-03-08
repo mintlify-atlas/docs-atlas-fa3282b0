@@ -1,0 +1,335 @@
+---
+title: 'RL Algorithms'
+description: 'Reinforcement learning algorithm implementations'
+---
+
+## Overview
+
+Neurenix provides implementations of state-of-the-art reinforcement learning algorithms for both discrete and continuous action spaces.
+
+## DQN - Deep Q-Network
+
+```python
+class DQN:
+    def __init__(
+        self,
+        observation_space: Dict[str, Any],
+        action_space: Dict[str, Any],
+        hidden_dims: List[int] = [64, 64],
+        learning_rate: float = 0.001,
+        gamma: float = 0.99,
+        epsilon_start: float = 1.0,
+        epsilon_end: float = 0.01,
+        epsilon_decay: float = 0.995,
+        buffer_size: int = 10000,
+        batch_size: int = 64,
+        update_target_every: int = 100,
+        double_q: bool = False,
+        dueling: bool = False,
+        name: str = "DQN",
+    )
+```
+
+### Parameters
+
+<ParamField path="observation_space" type="Dict[str, Any]" required>
+  Observation space specification.
+</ParamField>
+
+<ParamField path="action_space" type="Dict[str, Any]" required>
+  Action space specification.
+</ParamField>
+
+<ParamField path="hidden_dims" type="List[int]" default="[64, 64]">
+  Hidden layer dimensions for the Q-network.
+</ParamField>
+
+<ParamField path="learning_rate" type="float" default="0.001">
+  Learning rate for optimizer.
+</ParamField>
+
+<ParamField path="gamma" type="float" default="0.99">
+  Discount factor for future rewards.
+</ParamField>
+
+<ParamField path="epsilon_start" type="float" default="1.0">
+  Initial exploration rate.
+</ParamField>
+
+<ParamField path="epsilon_end" type="float" default="0.01">
+  Final exploration rate.
+</ParamField>
+
+<ParamField path="epsilon_decay" type="float" default="0.995">
+  Exploration rate decay per episode.
+</ParamField>
+
+<ParamField path="buffer_size" type="int" default="10000">
+  Experience replay buffer size.
+</ParamField>
+
+<ParamField path="batch_size" type="int" default="64">
+  Batch size for training.
+</ParamField>
+
+<ParamField path="update_target_every" type="int" default="100">
+  Number of steps between target network updates.
+</ParamField>
+
+<ParamField path="double_q" type="bool" default="False">
+  Whether to use Double DQN.
+</ParamField>
+
+<ParamField path="dueling" type="bool" default="False">
+  Whether to use Dueling DQN architecture.
+</ParamField>
+
+### Methods
+
+#### train
+
+```python
+def train(
+    self,
+    env,
+    episodes: int = 1000,
+    max_steps: int = 1000,
+    render: bool = False,
+    verbose: bool = True,
+    callback: Optional[Callable[[Dict[str, Any]], bool]] = None,
+) -> Dict[str, List[float]]
+```
+
+Train the DQN agent on an environment.
+
+<ResponseField name="return" type="Dict[str, List[float]]">
+  Dictionary of training metrics including episode rewards and losses.
+</ResponseField>
+
+## A2C - Advantage Actor-Critic
+
+```python
+class A2C:
+    def __init__(
+        self,
+        observation_space: Dict[str, Any],
+        action_space: Dict[str, Any],
+        actor_hidden_dims: List[int] = [64, 64],
+        critic_hidden_dims: List[int] = [64, 64],
+        actor_learning_rate: float = 0.0003,
+        critic_learning_rate: float = 0.001,
+        gamma: float = 0.99,
+        entropy_coef: float = 0.01,
+        value_coef: float = 0.5,
+        max_grad_norm: float = 0.5,
+        name: str = "A2C",
+    )
+```
+
+### Parameters
+
+<ParamField path="observation_space" type="Dict[str, Any]" required>
+  Observation space specification.
+</ParamField>
+
+<ParamField path="action_space" type="Dict[str, Any]" required>
+  Action space specification.
+</ParamField>
+
+<ParamField path="actor_hidden_dims" type="List[int]" default="[64, 64]">
+  Actor network hidden layer dimensions.
+</ParamField>
+
+<ParamField path="critic_hidden_dims" type="List[int]" default="[64, 64]">
+  Critic network hidden layer dimensions.
+</ParamField>
+
+<ParamField path="actor_learning_rate" type="float" default="0.0003">
+  Actor learning rate.
+</ParamField>
+
+<ParamField path="critic_learning_rate" type="float" default="0.001">
+  Critic learning rate.
+</ParamField>
+
+<ParamField path="gamma" type="float" default="0.99">
+  Discount factor.
+</ParamField>
+
+<ParamField path="entropy_coef" type="float" default="0.01">
+  Entropy loss coefficient for exploration.
+</ParamField>
+
+<ParamField path="value_coef" type="float" default="0.5">
+  Value loss coefficient.
+</ParamField>
+
+<ParamField path="max_grad_norm" type="float" default="0.5">
+  Maximum gradient norm for clipping.
+</ParamField>
+
+## PPO - Proximal Policy Optimization
+
+```python
+class PPO:
+    def __init__(
+        self,
+        observation_space: Dict[str, Any],
+        action_space: Dict[str, Any],
+        actor_hidden_dims: List[int] = [64, 64],
+        critic_hidden_dims: List[int] = [64, 64],
+        learning_rate: float = 0.0003,
+        gamma: float = 0.99,
+        gae_lambda: float = 0.95,
+        clip_epsilon: float = 0.2,
+        entropy_coef: float = 0.01,
+        value_coef: float = 0.5,
+        max_grad_norm: float = 0.5,
+        n_epochs: int = 10,
+        batch_size: int = 64,
+        name: str = "PPO",
+    )
+```
+
+PPO is one of the most popular RL algorithms, offering stable and efficient training.
+
+## DDPG - Deep Deterministic Policy Gradient
+
+```python
+class DDPG:
+    def __init__(
+        self,
+        observation_space: Dict[str, Any],
+        action_space: Dict[str, Any],
+        actor_hidden_dims: List[int] = [400, 300],
+        critic_hidden_dims: List[int] = [400, 300],
+        actor_learning_rate: float = 0.0001,
+        critic_learning_rate: float = 0.001,
+        gamma: float = 0.99,
+        tau: float = 0.005,
+        buffer_size: int = 1000000,
+        batch_size: int = 64,
+        noise_stddev: float = 0.1,
+        name: str = "DDPG",
+    )
+```
+
+DDPG is designed for continuous action spaces.
+
+## SAC - Soft Actor-Critic
+
+```python
+class SAC:
+    def __init__(
+        self,
+        observation_space: Dict[str, Any],
+        action_space: Dict[str, Any],
+        actor_hidden_dims: List[int] = [256, 256],
+        critic_hidden_dims: List[int] = [256, 256],
+        learning_rate: float = 0.0003,
+        gamma: float = 0.99,
+        tau: float = 0.005,
+        alpha: float = 0.2,
+        auto_alpha: bool = True,
+        buffer_size: int = 1000000,
+        batch_size: int = 256,
+        name: str = "SAC",
+    )
+```
+
+SAC is an off-policy algorithm for continuous control with entropy regularization.
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.rl import DQN, PPO, SAC
+from neurenix.agent import Environment
+
+# Create environment
+env = YourEnvironment()
+
+observation_space = {
+    'shape': (4,),
+    'type': 'continuous'
+}
+
+action_space = {
+    'n': 2,
+    'type': 'discrete'
+}
+
+# DQN for discrete actions
+dqn = DQN(
+    observation_space=observation_space,
+    action_space=action_space,
+    hidden_dims=[128, 128],
+    learning_rate=0.001,
+    double_q=True,
+    dueling=True
+)
+
+# Train the agent
+metrics = dqn.train(
+    env=env,
+    episodes=1000,
+    max_steps=500,
+    verbose=True
+)
+
+print(f"Average reward: {np.mean(metrics['episode_rewards'])}")
+
+# Save trained model
+dqn.save("dqn_agent.pth")
+
+# PPO for more stable training
+ppo = PPO(
+    observation_space=observation_space,
+    action_space=action_space,
+    learning_rate=0.0003,
+    gae_lambda=0.95,
+    clip_epsilon=0.2
+)
+
+metrics = ppo.train(env=env, episodes=500)
+
+# SAC for continuous control
+continuous_action_space = {
+    'shape': (2,),
+    'type': 'continuous',
+    'low': -1.0,
+    'high': 1.0
+}
+
+sac = SAC(
+    observation_space=observation_space,
+    action_space=continuous_action_space,
+    auto_alpha=True
+)
+
+metrics = sac.train(env=continuous_env, episodes=1000)
+```
+
+## Algorithm Comparison
+
+| Algorithm | Action Space | Sample Efficiency | Stability | Best For |
+|-----------|--------------|-------------------|-----------|----------|
+| **DQN** | Discrete | Medium | Medium | Discrete control, Atari games |
+| **A2C** | Both | Low | Medium | Fast training, simple tasks |
+| **PPO** | Both | Medium | High | General purpose, stable training |
+| **DDPG** | Continuous | High | Medium | Continuous control, robotics |
+| **SAC** | Continuous | High | High | Complex continuous tasks |
+
+## Tips
+
+<Tip>
+  **Hyperparameter tuning**: Start with default hyperparameters and adjust based on your environment. Learning rate and discount factor (gamma) are often the most important.
+</Tip>
+
+<Tip>
+  **Buffer size**: Larger buffers improve sample efficiency but require more memory. Use 10K-100K for simple tasks, 1M+ for complex tasks.
+</Tip>
+
+<Tip>
+  **Network architecture**: Deeper networks (3-4 layers) work better for visual inputs, while 2-layer networks suffice for low-dimensional states.
+</Tip>

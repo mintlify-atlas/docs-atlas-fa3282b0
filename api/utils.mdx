@@ -1,0 +1,395 @@
+---
+title: 'Utilities'
+description: 'Utility functions and helper classes'
+---
+
+## Overview
+
+The utils module provides various utility functions for common tasks in deep learning, including seeding, data conversion, model management, and learning rate scheduling.
+
+## Random Seed Management
+
+### seed_everything
+
+```python
+def seed_everything(seed: int) -> None
+```
+
+Set random seed for all random number generators to ensure reproducibility.
+
+<ParamField path="seed" type="int" required>
+  Random seed value.
+</ParamField>
+
+## Data Conversion
+
+### to_numpy
+
+```python
+def to_numpy(tensor: Union[Tensor, np.ndarray]) -> np.ndarray
+```
+
+Convert a tensor to a numpy array.
+
+<ParamField path="tensor" type="Union[Tensor, np.ndarray]" required>
+  Tensor or numpy array to convert.
+</ParamField>
+
+<ResponseField name="return" type="np.ndarray">
+  NumPy array.
+</ResponseField>
+
+### to_tensor
+
+```python
+def to_tensor(
+    data: Union[Tensor, np.ndarray, List, Tuple],
+    device: Optional[Union[str, Device]] = None
+) -> Tensor
+```
+
+Convert data to a Neurenix tensor.
+
+<ParamField path="data" type="Union[Tensor, np.ndarray, List, Tuple]" required>
+  Data to convert.
+</ParamField>
+
+<ParamField path="device" type="Optional[Union[str, Device]]">
+  Device to store the tensor on.
+</ParamField>
+
+<ResponseField name="return" type="Tensor">
+  Neurenix tensor.
+</ResponseField>
+
+### one_hot
+
+```python
+def one_hot(
+    indices: Union[Tensor, np.ndarray, List[int]],
+    num_classes: int
+) -> Tensor
+```
+
+Convert indices to one-hot encoding.
+
+<ParamField path="indices" type="Union[Tensor, np.ndarray, List[int]]" required>
+  Class indices.
+</ParamField>
+
+<ParamField path="num_classes" type="int" required>
+  Number of classes.
+</ParamField>
+
+<ResponseField name="return" type="Tensor">
+  One-hot encoded tensor.
+</ResponseField>
+
+## Model Management
+
+### get_module_device
+
+```python
+def get_module_device(module: Module) -> Optional[Device]
+```
+
+Get the device of a module by checking its parameters.
+
+<ParamField path="module" type="Module" required>
+  Module to check.
+</ParamField>
+
+<ResponseField name="return" type="Optional[Device]">
+  Device of the module or None if the module has no parameters.
+</ResponseField>
+
+### move_module_to_device
+
+```python
+def move_module_to_device(module: Module, device: Union[str, Device]) -> None
+```
+
+Move a module to a device.
+
+<ParamField path="module" type="Module" required>
+  Module to move.
+</ParamField>
+
+<ParamField path="device" type="Union[str, Device]" required>
+  Device to move the module to.
+</ParamField>
+
+### count_parameters
+
+```python
+def count_parameters(module: Module) -> int
+```
+
+Count the number of trainable parameters in a module.
+
+<ParamField path="module" type="Module" required>
+  Module to count parameters for.
+</ParamField>
+
+<ResponseField name="return" type="int">
+  Number of trainable parameters.
+</ResponseField>
+
+### model_summary
+
+```python
+def model_summary(module: Module) -> str
+```
+
+Get a summary of a module.
+
+<ParamField path="module" type="Module" required>
+  Module to summarize.
+</ParamField>
+
+<ResponseField name="return" type="str">
+  Summary string.
+</ResponseField>
+
+## Optimizer Utilities
+
+### get_learning_rate
+
+```python
+def get_learning_rate(optimizer: Optimizer) -> float
+```
+
+Get the learning rate of an optimizer.
+
+<ParamField path="optimizer" type="Optimizer" required>
+  Optimizer to get learning rate from.
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Learning rate.
+</ResponseField>
+
+### set_learning_rate
+
+```python
+def set_learning_rate(optimizer: Optimizer, lr: float) -> None
+```
+
+Set the learning rate of an optimizer.
+
+<ParamField path="optimizer" type="Optimizer" required>
+  Optimizer to set learning rate for.
+</ParamField>
+
+<ParamField path="lr" type="float" required>
+  Learning rate.
+</ParamField>
+
+## Learning Rate Schedulers
+
+### StepLR
+
+```python
+class StepLR:
+    def __init__(
+        self,
+        optimizer: Optimizer,
+        step_size: int,
+        gamma: float = 0.1,
+        last_epoch: int = -1
+    )
+```
+
+Decays the learning rate by gamma every step_size epochs.
+
+<ParamField path="optimizer" type="Optimizer" required>
+  Optimizer to schedule learning rate for.
+</ParamField>
+
+<ParamField path="step_size" type="int" required>
+  Period of learning rate decay.
+</ParamField>
+
+<ParamField path="gamma" type="float" default="0.1">
+  Multiplicative factor of learning rate decay.
+</ParamField>
+
+#### Methods
+
+```python
+def step(self, epoch: Optional[int] = None) -> None
+```
+
+Step the learning rate scheduler.
+
+### ExponentialLR
+
+```python
+class ExponentialLR:
+    def __init__(
+        self,
+        optimizer: Optimizer,
+        gamma: float = 0.1,
+        last_epoch: int = -1
+    )
+```
+
+Decays the learning rate by gamma every epoch.
+
+### ReduceLROnPlateau
+
+```python
+class ReduceLROnPlateau:
+    def __init__(
+        self,
+        optimizer: Optimizer,
+        mode: str = "min",
+        factor: float = 0.1,
+        patience: int = 10,
+        threshold: float = 1e-4,
+        threshold_mode: str = "rel",
+        cooldown: int = 0,
+        min_lr: float = 0.0,
+        eps: float = 1e-8,
+        verbose: bool = False,
+    )
+```
+
+Reduce learning rate when a metric has stopped improving.
+
+<ParamField path="mode" type="str" default="min">
+  One of 'min' or 'max'. In 'min' mode, lr will be reduced when the quantity monitored has stopped decreasing.
+</ParamField>
+
+<ParamField path="factor" type="float" default="0.1">
+  Factor by which the learning rate will be reduced.
+</ParamField>
+
+<ParamField path="patience" type="int" default="10">
+  Number of epochs with no improvement after which learning rate will be reduced.
+</ParamField>
+
+#### Methods
+
+```python
+def step(self, metrics: float) -> None
+```
+
+Step the scheduler based on the validation metric.
+
+## Decorators
+
+### timeit
+
+```python
+def timeit(func: Callable) -> Callable
+```
+
+Decorator to measure the execution time of a function.
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.utils import (
+    seed_everything,
+    to_numpy,
+    to_tensor,
+    one_hot,
+    count_parameters,
+    model_summary,
+    StepLR,
+    ReduceLROnPlateau,
+    timeit
+)
+
+# Set random seed for reproducibility
+seed_everything(42)
+
+# Data conversion
+np_array = np.array([1, 2, 3, 4, 5])
+tensor = to_tensor(np_array, device="cuda:0")
+back_to_numpy = to_numpy(tensor)
+
+# One-hot encoding
+class_indices = [0, 1, 2, 1, 0]
+num_classes = 3
+one_hot_encoded = one_hot(class_indices, num_classes)
+print(one_hot_encoded.shape)  # (5, 3)
+
+# Model utilities
+model = YourModel()
+num_params = count_parameters(model)
+print(f"Model has {num_params:,} parameters")
+
+summary = model_summary(model)
+print(summary)
+
+# Get model device
+device = get_module_device(model)
+print(f"Model is on: {device}")
+
+# Learning rate scheduling
+optimizer = nx.optim.Adam(model.parameters(), lr=0.001)
+
+# Step scheduler
+scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+
+for epoch in range(100):
+    train(model, optimizer)
+    scheduler.step()
+    print(f"Epoch {epoch}, LR: {get_learning_rate(optimizer)}")
+
+# Reduce on plateau scheduler
+scheduler = ReduceLROnPlateau(
+    optimizer,
+    mode='min',
+    factor=0.5,
+    patience=10,
+    verbose=True
+)
+
+for epoch in range(100):
+    train_loss = train(model, optimizer)
+    val_loss = validate(model)
+    scheduler.step(val_loss)
+
+# Timing decorator
+@timeit
+def expensive_operation():
+    # Your code here
+    result = model(large_input)
+    return result
+
+result = expensive_operation()
+# Output: expensive_operation took 0.1234 seconds to execute
+
+# Manual LR adjustment
+set_learning_rate(optimizer, 0.0001)
+print(f"New LR: {get_learning_rate(optimizer)}")
+
+# Exponential decay
+exp_scheduler = ExponentialLR(optimizer, gamma=0.95)
+
+for epoch in range(50):
+    train(model, optimizer)
+    exp_scheduler.step()
+```
+
+## Best Practices
+
+<Tip>
+  **Always seed**: Call `seed_everything()` at the start of your script for reproducible results.
+</Tip>
+
+<Tip>
+  **Monitor parameters**: Use `count_parameters()` to understand your model size and memory requirements.
+</Tip>
+
+<Tip>
+  **Learning rate scheduling**: Start with ReduceLROnPlateau for adaptive learning rate adjustment based on validation metrics.
+</Tip>
+
+<Tip>
+  **Profile code**: Use the `@timeit` decorator to identify performance bottlenecks.
+</Tip>

@@ -1,122 +1,165 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Neurenix",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#5ecad5",
+    "light": "#212430",
+    "dark": "#c0d2d5"
   },
   "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/MilesONerd/neurenix"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/MilesONerd/neurenix",
+      "discord": "https://discord.gg/Eqnhr8tK2G",
+      "x": "https://x.com/neurenix"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "core/architecture",
+              "core/tensors",
+              "core/devices",
+              "core/neural-networks"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "AI Agents",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "agents/overview",
+              "agents/single-agent",
+              "agents/multi-agent",
+              "agents/environments"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Reinforcement Learning",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "rl/overview",
+              "rl/policies",
+              "rl/algorithms",
+              "rl/training"
+            ]
+          },
+          {
+            "group": "Advanced Features",
+            "pages": [
+              "advanced/distributed-training",
+              "advanced/federated-learning",
+              "advanced/quantization",
+              "advanced/automl",
+              "advanced/continual-learning"
+            ]
+          },
+          {
+            "group": "Specialized Modules",
+            "pages": [
+              "modules/gnn",
+              "modules/fuzzy-logic",
+              "modules/neuroevolution",
+              "modules/quantum",
+              "modules/neuro-symbolic",
+              "modules/explainability"
+            ]
+          },
+          {
+            "group": "Hardware Support",
+            "pages": [
+              "hardware/overview",
+              "hardware/cuda",
+              "hardware/rocm",
+              "hardware/arm",
+              "hardware/fpga",
+              "hardware/npu"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/onnx",
+              "deployment/api-serving",
+              "deployment/docker",
+              "deployment/kubernetes",
+              "deployment/edge-devices"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core API",
             "pages": [
-              "api-reference/introduction"
+              "api/tensor",
+              "api/device",
+              "api/module"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Neural Networks",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/nn/layers",
+              "api/nn/activations",
+              "api/nn/loss-functions",
+              "api/nn/optimizers"
+            ]
+          },
+          {
+            "group": "Agents & RL",
+            "pages": [
+              "api/agent",
+              "api/multi-agent",
+              "api/rl-algorithms"
+            ]
+          },
+          {
+            "group": "Data & Utils",
+            "pages": [
+              "api/dataset-hub",
+              "api/data-loaders",
+              "api/utils"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/overview",
+              "cli/init",
+              "cli/run",
+              "cli/train",
+              "cli/eval",
+              "cli/export",
+              "cli/serve"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

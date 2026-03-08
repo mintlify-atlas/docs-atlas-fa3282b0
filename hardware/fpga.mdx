@@ -1,0 +1,517 @@
+---
+title: FPGA Support
+description: FPGA acceleration with OpenCL, Xilinx Vitis, and Intel OpenVINO
+---
+
+## Overview
+
+Neurenix provides FPGA (Field-Programmable Gate Array) support for specialized hardware acceleration of AI workloads. FPGAs offer:
+
+- **Customizable hardware** - Program logic gates for specific operations
+- **Low latency** - Deterministic execution with minimal overhead
+- **Power efficiency** - Optimized power consumption for inference
+- **Flexibility** - Reconfigurable for different models and workloads
+
+### Supported Frameworks
+
+- **OpenCL** - Industry-standard for heterogeneous computing
+- **Xilinx Vitis** - High-level synthesis and optimization for Xilinx FPGAs
+- **Intel OpenVINO** - Inference acceleration on Intel FPGAs
+
+## Supported Hardware
+
+### Xilinx FPGAs
+- Alveo U250, U280, U50, U55C
+- Versal AI Engine series
+- Kria KV260, KR260 (edge)
+
+### Intel FPGAs
+- Arria 10 GX, SX
+- Stratix 10 DX, GX, SX
+- Agilex F-Series
+
+## Installation
+
+### OpenCL Framework
+
+```bash
+# Install OpenCL runtime
+sudo apt-get install ocl-icd-opencl-dev
+
+# Install vendor-specific runtime (Xilinx example)
+wget https://www.xilinx.com/bin/public/openDownload?filename=xrt_installer.deb
+sudo apt install ./xrt_installer.deb
+
+# Install Neurenix with FPGA support
+pip install neurenix-fpga
+```
+
+### Xilinx Vitis
+
+```bash
+# Install Vitis (requires license)
+wget https://www.xilinx.com/support/download.html
+# Follow Xilinx installation instructions
+
+# Source Vitis environment
+source /tools/Xilinx/Vitis/2023.2/settings64.sh
+
+# Install Neurenix with Vitis support
+export NEURENIX_WITH_VITIS=1
+pip install -e .
+```
+
+### Intel OpenVINO
+
+```bash
+# Install OpenVINO
+wget https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.2/linux/l_openvino_toolkit_ubuntu22_2023.2.0.tar.gz
+tar -xf l_openvino_toolkit_ubuntu22_2023.2.0.tar.gz
+cd l_openvino_toolkit_ubuntu22_2023.2.0
+sudo ./install_openvino_dependencies.sh
+
+# Source OpenVINO environment
+source /opt/intel/openvino_2023/setupvars.sh
+
+# Install Neurenix with OpenVINO support
+pip install neurenix-openvino
+```
+
+## FPGA Management
+
+### Initialize FPGA
+
+```python
+import neurenix as nx
+from neurenix.hardware import FPGAManager
+
+# Initialize with OpenCL
+fpga = FPGAManager(framework='opencl')
+fpga.initialize()
+
+# Get FPGA information
+info = fpga.get_fpga_info()
+print(f"Framework: {info['framework']}")
+print(f"Device: {info['name']}")
+print(f"Memory: {info['global_memory']}")
+print(f"Compute units: {info['compute_units']}")
+```
+
+```cpp
+// C++ FPGA initialization
+#include "hardware/fpga.h"
+
+using namespace phynexus::hardware;
+
+FPGAConfig config;
+config.framework = FPGAFramework::OpenCL;
+config.device_id = 0;
+config.platform_id = 0;
+config.num_compute_units = 4;
+
+if (FPGABackend::initialize(config)) {
+    auto device_info = FPGABackend::get_device_info();
+    std::cout << "FPGA Device: " << device_info["name"] << std::endl;
+}
+```
+
+### Device Selection
+
+```python
+# List available FPGAs
+fpga_count = fpga.get_fpga_count()
+print(f"Available FPGAs: {fpga_count}")
+
+# Initialize specific device
+fpga = FPGAManager(framework='opencl', device_id=0)
+fpga.initialize()
+```
+
+## OpenCL Framework
+
+### Overview
+
+OpenCL provides portable programming for FPGAs:
+
+```python
+from neurenix.hardware import OpenCLManager
+
+# Initialize OpenCL
+opencl = OpenCLManager(device_id=0, platform_id=0)
+opencl.initialize()
+
+# Get platform info
+platforms = opencl.get_platforms()
+for i, platform in enumerate(platforms):
+    print(f"Platform {i}: {platform['name']}")
+    print(f"  Vendor: {platform['vendor']}")
+    print(f"  Version: {platform['version']}")
+
+# Get device info
+devices = opencl.get_devices(platform_id=0)
+for i, device in enumerate(devices):
+    print(f"Device {i}: {device['name']}")
+    print(f"  Type: {device['type']}")
+    print(f"  Memory: {device['global_memory'] / (1024**3):.2f} GB")
+```
+
+### Custom Kernels
+
+```python
+# Define OpenCL kernel
+kernel_source = """
+__kernel void vector_add(
+    __global const float* a,
+    __global const float* b,
+    __global float* c,
+    const int n
+) {
+    int gid = get_global_id(0);
+    if (gid < n) {
+        c[gid] = a[gid] + b[gid];
+    }
+}
+"""
+
+# Create kernel
+kernel = opencl.create_kernel('vector_add', kernel_source)
+
+# Execute kernel
+import numpy as np
+a = np.random.randn(1024).astype(np.float32)
+b = np.random.randn(1024).astype(np.float32)
+c = np.zeros(1024, dtype=np.float32)
+
+opencl.execute_kernel(
+    kernel,
+    global_size=(1024,),
+    local_size=(64,),
+    args=[a, b, c, 1024]
+)
+```
+
+```cpp
+// C++ OpenCL kernel execution
+const char* kernel_source = R"(
+__kernel void vector_add(
+    __global const float* a,
+    __global const float* b,
+    __global float* c,
+    const int n
+) {
+    int gid = get_global_id(0);
+    if (gid < n) {
+        c[gid] = a[gid] + b[gid];
+    }
+}
+)";
+
+void* bitstream = FPGABackend::load_bitstream("kernel.aocx");
+void* kernel = FPGABackend::create_kernel(bitstream, "vector_add");
+
+std::vector<void*> args = {a_buffer, b_buffer, c_buffer, &n};
+std::vector<size_t> global_size = {1024};
+std::vector<size_t> local_size = {64};
+
+FPGABackend::execute_kernel(kernel, args, global_size, local_size);
+```
+
+## Xilinx Vitis Framework
+
+### Overview
+
+Vitis provides high-level synthesis and optimization for Xilinx FPGAs:
+
+```python
+from neurenix.hardware import VitisManager
+
+# Initialize Vitis
+vitis = VitisManager(
+    device_id=0,
+    target_device='u250',
+    xclbin_path='model.xclbin'
+)
+vitis.initialize()
+```
+
+### Load Bitstream
+
+```python
+# Load XCLBIN (Xilinx binary)
+vitis.load_xclbin('model.xclbin')
+
+# Get available kernels
+kernels = vitis.get_kernels()
+print(f"Available kernels: {kernels}")
+```
+
+### Compile Model
+
+```python
+from neurenix import nn
+
+# Define model
+model = nn.Sequential(
+    nn.Conv2d(3, 64, kernel_size=3, padding=1),
+    nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Conv2d(64, 128, kernel_size=3, padding=1),
+    nn.ReLU(),
+    nn.AdaptiveAvgPool2d(1)
+)
+
+# Compile for Vitis
+input_shape = (1, 3, 224, 224)
+compiled_model = vitis.compile_model(model, input_shape)
+
+# Execute on FPGA
+input_tensor = nx.randn(1, 3, 224, 224)
+output = vitis.execute_model(compiled_model, input_tensor)
+```
+
+### Vitis HLS
+
+```cpp
+// Vitis HLS kernel example
+#include <hls_stream.h>
+#include <ap_fixed.h>
+
+extern "C" {
+void conv2d_kernel(
+    const float* input,
+    const float* weights,
+    float* output,
+    int height,
+    int width,
+    int channels
+) {
+#pragma HLS INTERFACE m_axi port=input offset=slave bundle=gmem0
+#pragma HLS INTERFACE m_axi port=weights offset=slave bundle=gmem1
+#pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem2
+#pragma HLS INTERFACE s_axilite port=height
+#pragma HLS INTERFACE s_axilite port=width
+#pragma HLS INTERFACE s_axilite port=channels
+#pragma HLS INTERFACE s_axilite port=return
+
+    // Kernel implementation with optimizations
+    for (int c = 0; c < channels; c++) {
+#pragma HLS PIPELINE II=1
+        for (int h = 0; h < height; h++) {
+            for (int w = 0; w < width; w++) {
+                // Convolution operation
+            }
+        }
+    }
+}
+}
+```
+
+## Intel OpenVINO Framework
+
+### Overview
+
+OpenVINO optimizes inference on Intel FPGAs:
+
+```python
+from neurenix.hardware import OpenVINOManager
+
+# Initialize OpenVINO
+openvino = OpenVINOManager(
+    device_id=0,
+    precision='FP16',
+    optimize_for='throughput'
+)
+openvino.initialize()
+```
+
+### Convert and Optimize Model
+
+```python
+import neurenix as nx
+
+# Load PyTorch model
+model = nx.load('model.pt')
+
+# Convert to OpenVINO IR
+from neurenix.openvino import convert_to_ir
+
+ir_model = convert_to_ir(
+    model,
+    input_shape=(1, 3, 224, 224),
+    output_path='model.xml'
+)
+
+# Load IR model for FPGA
+fpga_model = openvino.load_model('model.xml', 'model.bin')
+```
+
+### Run Inference
+
+```python
+# Get input/output info
+input_info = openvino.get_input_info(fpga_model)
+output_info = openvino.get_output_info(fpga_model)
+
+print(f"Input shape: {input_info['shape']}")
+print(f"Output shape: {output_info['shape']}")
+
+# Run inference
+input_tensor = nx.randn(1, 3, 224, 224)
+result = openvino.infer(fpga_model, {'input': input_tensor})
+output = result['output']
+```
+
+## Memory Management
+
+### Allocate FPGA Memory
+
+```python
+# Allocate buffer on FPGA
+buffer = fpga.allocate_memory(size=1024*1024, memory_bank=0)
+
+# Copy data to FPGA
+data = np.random.randn(1024, 1024).astype(np.float32)
+fpga.copy_to_fpga(buffer, data)
+
+# Copy data from FPGA
+result = np.zeros((1024, 1024), dtype=np.float32)
+fpga.copy_from_fpga(result, buffer)
+
+# Free memory
+fpga.free_memory(buffer)
+```
+
+```cpp
+// C++ FPGA memory management
+void* buffer = FPGABackend::allocate_memory(1024 * 1024 * sizeof(float), 0);
+
+// Copy to FPGA
+float* host_data = new float[1024 * 1024];
+FPGABackend::copy_to_fpga(buffer, host_data, 1024 * 1024 * sizeof(float));
+
+// Copy from FPGA
+float* result = new float[1024 * 1024];
+FPGABackend::copy_from_fpga(result, buffer, 1024 * 1024 * sizeof(float));
+
+// Free memory
+FPGABackend::free_memory(buffer);
+```
+
+### Memory Banks
+
+```python
+# Allocate on different memory banks for parallel access
+buffer0 = fpga.allocate_memory(size=1024*1024, memory_bank=0)
+buffer1 = fpga.allocate_memory(size=1024*1024, memory_bank=1)
+
+# Kernel can access both banks simultaneously
+fpga.execute_kernel(kernel, args=[buffer0, buffer1, output])
+```
+
+## Performance Optimization
+
+### Profiling
+
+```python
+# Enable profiling
+fpga = FPGAManager(framework='opencl')
+fpga.config.enable_profiling = True
+fpga.initialize()
+
+# Run operations
+output = fpga.execute_model(model, input)
+
+# Get profiling results
+profile_data = fpga.get_profile_data()
+print(f"Kernel execution time: {profile_data['kernel_time_ms']} ms")
+print(f"Data transfer time: {profile_data['transfer_time_ms']} ms")
+```
+
+### Optimization Techniques
+
+```python
+# Enable optimizations
+fpga.config.enable_optimization = True
+fpga.config.num_compute_units = 4  # Parallel execution units
+fpga.config.enable_memory_bank_mapping = True
+
+# Configure memory bank mapping
+fpga.config.memory_bank_mapping = {
+    'input': 0,
+    'weights': 1,
+    'output': 2
+}
+
+fpga.initialize()
+```
+
+### Batch Processing
+
+```python
+# Process multiple inputs in parallel
+batch_size = 8
+inputs = [nx.randn(1, 3, 224, 224) for _ in range(batch_size)]
+
+# Execute batch on FPGA
+outputs = fpga.batch_execute(model, inputs)
+```
+
+## Model Deployment
+
+### Export for FPGA
+
+```python
+# Optimize model for FPGA deployment
+from neurenix.fpga import optimize_for_fpga
+
+optimized_model = optimize_for_fpga(
+    model,
+    input_shape=(1, 3, 224, 224),
+    target='xilinx_u250',
+    precision='int8',
+    optimization_level=3
+)
+
+# Export bitstream
+optimized_model.export('model.xclbin')
+```
+
+### Quantization
+
+```python
+from neurenix.quantization import quantize_for_fpga
+
+# Quantize model for FPGA
+quantized_model = quantize_for_fpga(
+    model,
+    calibration_data=calibration_loader,
+    quantization_scheme='int8',
+    target_fpga='intel_arria10'
+)
+```
+
+## Environment Variables
+
+```bash
+# OpenCL settings
+export XILINX_XRT=/opt/xilinx/xrt
+export LD_LIBRARY_PATH=$XILINX_XRT/lib:$LD_LIBRARY_PATH
+
+# Vitis settings
+export VITIS_PATH=/tools/Xilinx/Vitis/2023.2
+source $VITIS_PATH/settings64.sh
+
+# OpenVINO settings
+export INTEL_OPENVINO_DIR=/opt/intel/openvino_2023
+source $INTEL_OPENVINO_DIR/setupvars.sh
+
+# FPGA device selection
+export NEURENIX_FPGA_DEVICE=0
+```
+
+## See Also
+
+- [Xilinx Vitis Documentation](https://www.xilinx.com/products/design-tools/vitis.html)
+- [Intel OpenVINO Documentation](https://docs.openvino.ai/)
+- [NPU Support](/hardware/npu) - Neural Processing Units
+- [Model Optimization](/optimization/quantization)

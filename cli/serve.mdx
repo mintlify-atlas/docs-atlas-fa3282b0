@@ -1,0 +1,518 @@
+---
+title: neurenix serve
+description: Serve a trained model as a RESTful API for production deployment
+---
+
+The `serve` command deploys a trained Neurenix model as an API server, making it accessible for real-time inference.
+
+## Usage
+
+```bash
+neurenix serve --model <model_file> [options]
+```
+
+## Options
+
+| Option | Type | Required | Default | Description |
+|--------|------|----------|---------|-------------|
+| `--model` | string | Yes | - | Path to the model file (`.nrx` format) |
+| `--host` | string | No | `0.0.0.0` | Host to bind the server to |
+| `--port` | integer | No | `8000` | Port to bind the server to |
+| `--device` | string | No | `auto` | Device for inference (`cpu`, `cuda`, `auto`) |
+| `--batch-size` | integer | No | `1` | Batch size for inference |
+| `--workers` | integer | No | `1` | Number of worker processes |
+| `--api-type` | string | No | `rest` | API type (`rest`, `websocket`, `grpc`) |
+| `--config` | string | No | None | API configuration file |
+| `--auth` | flag | No | `false` | Enable authentication |
+| `--cors` | flag | No | `false` | Enable CORS |
+
+## API Types
+
+### REST API
+
+Default HTTP REST API with JSON payloads:
+
+```bash
+neurenix serve --model models/model.nrx --api-type rest
+```
+
+**Endpoints:**
+- `POST /predict` - Make predictions
+- `GET /info` - Get model information
+- `GET /health` - Health check endpoint
+
+### WebSocket API
+
+Real-time bidirectional communication:
+
+```bash
+neurenix serve --model models/model.nrx --api-type websocket
+```
+
+**Connection:**
+- `WebSocket ws://host:port/ws`
+
+### gRPC API
+
+High-performance RPC:
+
+```bash
+neurenix serve --model models/model.nrx --api-type grpc
+```
+
+**Connection:**
+- gRPC endpoint at `host:port`
+
+## Examples
+
+### Basic server
+
+```bash
+neurenix serve --model models/model.nrx
+```
+
+```
+Loading model from models/model.nrx...
+Creating REST API server...
+Starting server on 0.0.0.0:8000...
+
+API Endpoints:
+  POST http://0.0.0.0:8000/predict
+  GET  http://0.0.0.0:8000/info
+  GET  http://0.0.0.0:8000/health
+
+Press Ctrl+C to stop the server.
+```
+
+### Custom host and port
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --host 127.0.0.1 \
+  --port 5000
+```
+
+```
+Loading model from models/model.nrx...
+Creating REST API server...
+Starting server on 127.0.0.1:5000...
+
+API Endpoints:
+  POST http://127.0.0.1:5000/predict
+  GET  http://127.0.0.1:5000/info
+  GET  http://127.0.0.1:5000/health
+
+Press Ctrl+C to stop the server.
+```
+
+### GPU inference
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --device cuda \
+  --batch-size 32
+```
+
+### Multiple workers
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --workers 4
+```
+
+### WebSocket server
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --api-type websocket \
+  --port 8080
+```
+
+```
+Loading model from models/model.nrx...
+Creating WEBSOCKET API server...
+Starting server on 0.0.0.0:8080...
+
+API Endpoints:
+  WebSocket ws://0.0.0.0:8080/ws
+
+Press Ctrl+C to stop the server.
+```
+
+### gRPC server
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --api-type grpc \
+  --port 50051
+```
+
+```
+Loading model from models/model.nrx...
+Creating GRPC API server...
+Starting server on 0.0.0.0:50051...
+
+API Endpoints:
+  gRPC 0.0.0.0:50051
+  Use the generated client to connect to the server.
+
+Press Ctrl+C to stop the server.
+```
+
+### Enable authentication
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --auth
+```
+
+### Enable CORS
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --cors
+```
+
+### Custom configuration
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --config server_config.json
+```
+
+**server_config.json:**
+```json
+{
+  "timeout": 30,
+  "max_request_size": 10485760,
+  "rate_limit": {
+    "requests_per_minute": 60
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/server.log"
+  }
+}
+```
+
+### Production deployment
+
+```bash
+neurenix serve \
+  --model models/production.nrx \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --device cuda \
+  --workers 8 \
+  --batch-size 64 \
+  --auth \
+  --cors \
+  --config production_config.json
+```
+
+## Making Requests
+
+### REST API
+
+#### Predict endpoint
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": [[1.0, 2.0, 3.0, 4.0]]}'
+```
+
+**Response:**
+```json
+{
+  "predictions": [0.85, 0.12, 0.03],
+  "inference_time": 0.023
+}
+```
+
+#### Info endpoint
+
+```bash
+curl http://localhost:8000/info
+```
+
+**Response:**
+```json
+{
+  "model": "models/model.nrx",
+  "version": "1.0.0",
+  "input_shape": [4],
+  "output_shape": [3],
+  "device": "cuda:0"
+}
+```
+
+#### Health endpoint
+
+```bash
+curl http://localhost:8000/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "uptime": 3600,
+  "requests_served": 1523
+}
+```
+
+### WebSocket API
+
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws');
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    type: 'predict',
+    data: [[1.0, 2.0, 3.0, 4.0]]
+  }));
+};
+
+ws.onmessage = (event) => {
+  const response = JSON.parse(event.data);
+  console.log('Prediction:', response.predictions);
+};
+```
+
+### Python Client
+
+```python
+import requests
+
+response = requests.post(
+    'http://localhost:8000/predict',
+    json={'inputs': [[1.0, 2.0, 3.0, 4.0]]}
+)
+
+print(response.json())
+# {'predictions': [0.85, 0.12, 0.03], 'inference_time': 0.023}
+```
+
+## Error Handling
+
+### Model not found
+
+```bash
+neurenix serve --model nonexistent.nrx
+```
+
+```
+Error: Model file 'nonexistent.nrx' not found.
+```
+
+### Port already in use
+
+```bash
+neurenix serve --model models/model.nrx --port 8000
+```
+
+```
+Error serving model: Address already in use
+```
+
+**Solution:** Use a different port:
+```bash
+neurenix serve --model models/model.nrx --port 8001
+```
+
+## Performance Tuning
+
+### Batch Size
+
+Increase batch size for higher throughput:
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --batch-size 64  # Process up to 64 requests at once
+```
+
+### Workers
+
+Increase workers for concurrent requests:
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --workers 8  # 8 worker processes
+```
+
+### GPU Acceleration
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --device cuda  # Use GPU for inference
+```
+
+## Best Practices
+
+### 1. Use production-ready configuration
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --config production_config.json \
+  --workers 8 \
+  --auth \
+  --cors
+```
+
+### 2. Monitor server health
+
+```bash
+# In a monitoring script
+while true; do
+  curl http://localhost:8000/health
+  sleep 60
+done
+```
+
+### 3. Use reverse proxy for production
+
+```nginx
+# nginx configuration
+upstream neurenix {
+    server localhost:8000;
+}
+
+server {
+    listen 80;
+    server_name api.example.com;
+    
+    location / {
+        proxy_pass http://neurenix;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### 4. Set resource limits
+
+```bash
+# Limit memory and CPU
+docker run -m 4g --cpus=2 \
+  neurenix-server \
+  neurenix serve --model /models/model.nrx
+```
+
+### 5. Enable logging
+
+Create a config file with logging:
+
+```json
+{
+  "logging": {
+    "level": "INFO",
+    "file": "logs/server.log",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}
+```
+
+### 6. Implement graceful shutdown
+
+The server handles SIGINT and SIGTERM for graceful shutdown:
+
+```bash
+# Start server
+neurenix serve --model models/model.nrx &
+PID=$!
+
+# Stop gracefully
+kill -SIGTERM $PID
+```
+
+## Deployment Scenarios
+
+### Local Development
+
+```bash
+neurenix serve \
+  --model models/model.nrx \
+  --host 127.0.0.1 \
+  --port 8000
+```
+
+### Docker Container
+
+```dockerfile
+FROM python:3.10
+RUN pip install neurenix
+COPY models/model.nrx /app/model.nrx
+CMD ["neurenix", "serve", "--model", "/app/model.nrx", "--host", "0.0.0.0"]
+```
+
+```bash
+docker build -t neurenix-server .
+docker run -p 8000:8000 neurenix-server
+```
+
+### Kubernetes
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neurenix-server
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: neurenix
+        image: neurenix-server:latest
+        command: ["neurenix", "serve"]
+        args:
+          - "--model"
+          - "/models/model.nrx"
+          - "--workers"
+          - "4"
+        ports:
+        - containerPort: 8000
+```
+
+### Cloud Deployment
+
+```bash
+# AWS EC2, Google Cloud, Azure, etc.
+neurenix serve \
+  --model models/model.nrx \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --workers 8 \
+  --device cuda \
+  --auth
+```
+
+## Stopping the Server
+
+Press `Ctrl+C` to stop the server gracefully:
+
+```
+^C
+Stopping server...
+Server stopped.
+```
+
+## See Also
+
+- [Export command](/cli/export) - Export models for deployment
+- [Eval command](/cli/eval) - Evaluate model performance
+- [Run command](/cli/run) - Train models
+- [Optimize command](/cli/optimize) - Optimize models

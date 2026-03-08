@@ -1,0 +1,454 @@
+---
+title: CUDA Support
+description: NVIDIA GPU acceleration with CUDA and Tensor Cores in Neurenix
+---
+
+## Overview
+
+Neurenix provides comprehensive CUDA support for NVIDIA GPUs, enabling high-performance deep learning and scientific computing. The framework includes support for:
+
+- CUDA compute operations
+- NVIDIA Tensor Cores for mixed precision
+- cuDNN for optimized neural network primitives
+- cuBLAS for accelerated linear algebra
+- TensorRT for inference optimization
+- Multi-GPU training and inference
+
+## Requirements
+
+- NVIDIA GPU with compute capability 3.5 or higher
+- CUDA Toolkit 11.0 or later
+- cuDNN 8.0 or later (optional but recommended)
+- TensorRT 8.0 or later (optional, for inference optimization)
+
+## Installation
+
+Install Neurenix with CUDA support:
+
+```bash
+# Install with CUDA 12.x
+pip install neurenix-cuda12
+
+# Install with CUDA 11.x
+pip install neurenix-cuda11
+
+# Build from source with CUDA
+export NEURENIX_WITH_CUDA=1
+export CUDA_HOME=/usr/local/cuda
+pip install -e .
+```
+
+## Device Management
+
+### Check CUDA Availability
+
+```python
+import neurenix as nx
+
+# Check if CUDA is available
+if nx.cuda.is_available():
+    print(f"CUDA is available")
+    print(f"CUDA version: {nx.cuda.version()}")
+    print(f"Number of GPUs: {nx.cuda.device_count()}")
+else:
+    print("CUDA is not available")
+```
+
+```cpp
+// C++ CUDA detection
+#include <phynexus/hardware/cuda.h>
+
+using namespace phynexus::hardware;
+
+if (initialize_cuda()) {
+    int device_count = get_cuda_device_count();
+    std::cout << "CUDA devices: " << device_count << std::endl;
+}
+```
+
+### Get Device Properties
+
+```python
+for i in range(nx.cuda.device_count()):
+    props = nx.cuda.get_device_properties(i)
+    print(f"\nDevice {i}: {props.name}")
+    print(f"  Memory: {props.total_memory / (1024**3):.2f} GB")
+    print(f"  Compute Capability: {props.compute_capability_major}.{props.compute_capability_minor}")
+    print(f"  Multi-processors: {props.multi_processor_count}")
+    print(f"  Max threads per block: {props.max_threads_per_block}")
+    print(f"  Warp size: {props.warp_size}")
+```
+
+### Set Current Device
+
+```python
+# Set device 1 as current
+nx.cuda.set_device(1)
+
+# Get current device
+current = nx.cuda.current_device()
+print(f"Current device: {current}")
+
+# Using context manager
+with nx.cuda.device(1):
+    # Operations on device 1
+    tensor = nx.randn(1000, 1000)
+```
+
+## Memory Management
+
+### Allocate Memory
+
+```python
+# Allocate tensor on CUDA device
+tensor = nx.zeros((1000, 1000), device='cuda:0')
+
+# Allocate with specific device
+device = nx.Device.cuda(0)
+tensor = nx.empty((1000, 1000), device=device)
+```
+
+```cpp
+// C++ CUDA memory allocation
+using namespace phynexus::hardware;
+
+void* ptr = cuda_malloc(1024 * 1024 * sizeof(float));
+// ... use memory ...
+cuda_free(ptr);
+```
+
+### Memory Transfer
+
+```python
+import numpy as np
+
+# Host to device
+data_cpu = np.random.randn(100, 100).astype(np.float32)
+tensor_gpu = nx.from_numpy(data_cpu, device='cuda')
+
+# Device to host
+data_back = tensor_gpu.cpu().numpy()
+
+# Device to device
+tensor_gpu2 = tensor_gpu.to('cuda:1')
+```
+
+```cpp
+// C++ memory transfer
+float* host_data = new float[size];
+void* device_data = cuda_malloc(size * sizeof(float));
+
+// Host to device
+cuda_memcpy_host_to_device(device_data, host_data, size * sizeof(float));
+
+// Device to host
+cuda_memcpy_device_to_host(host_data, device_data, size * sizeof(float));
+
+// Device to device
+void* device_data2 = cuda_malloc(size * sizeof(float));
+cuda_memcpy_device_to_device(device_data2, device_data, size * sizeof(float));
+```
+
+### Memory Information
+
+```python
+# Get memory statistics
+stats = nx.cuda.memory_stats()
+print(f"Allocated: {stats['allocated_bytes'] / (1024**3):.2f} GB")
+print(f"Reserved: {stats['reserved_bytes'] / (1024**3):.2f} GB")
+
+# Clear cache
+nx.cuda.empty_cache()
+
+# Reset peak memory stats
+nx.cuda.reset_peak_memory_stats()
+```
+
+## NVIDIA Tensor Cores
+
+### Overview
+
+Tensor Cores provide accelerated mixed-precision matrix operations on compatible GPUs (Volta, Turing, Ampere, Hopper architectures).
+
+```python
+from neurenix.hardware import TensorCoresBackend
+
+# Check Tensor Cores availability
+if TensorCoresBackend.is_available():
+    print("Tensor Cores are available")
+    
+    # Create Tensor Cores backend
+    backend = TensorCoresBackend()
+    backend.initialize()
+    
+    # Set precision mode
+    backend.set_precision('mixed')  # FP16 compute, FP32 accumulation
+```
+
+### Precision Modes
+
+```python
+# FP32 precision (standard)
+backend.set_precision('fp32')
+
+# FP16 precision (faster, less accurate)
+backend.set_precision('fp16')
+
+# Mixed precision (recommended)
+backend.set_precision('mixed')  # FP16 computation with FP32 accumulation
+```
+
+### Optimized Matrix Multiplication
+
+```python
+# Automatic Tensor Cores usage for compatible operations
+a = nx.randn(1024, 1024, device='cuda', dtype=nx.float16)
+b = nx.randn(1024, 1024, device='cuda', dtype=nx.float16)
+
+# Uses Tensor Cores automatically
+c = a @ b  # Much faster on Tensor Core GPUs
+
+# Explicit Tensor Cores backend
+backend = TensorCoresBackend()
+c = backend.matmul(a, b)
+```
+
+### Model Optimization
+
+```python
+from neurenix.hardware import TensorCoresBackend
+
+model = MyModel()
+backend = TensorCoresBackend()
+backend.initialize()
+
+# Optimize model for Tensor Cores
+optimized_model = backend.optimize_model(model, precision='mixed')
+
+# Run inference with Tensor Cores
+output = optimized_model(input)
+```
+
+## Streams and Asynchronous Execution
+
+### Create Streams
+
+```python
+# Create CUDA streams
+stream1 = nx.cuda.Stream()
+stream2 = nx.cuda.Stream()
+
+# Use streams for parallel operations
+with stream1:
+    result1 = model1(input1)
+
+with stream2:
+    result2 = model2(input2)
+
+# Synchronize all streams
+nx.cuda.synchronize()
+```
+
+```cpp
+// C++ stream management
+void* stream1 = cuda_create_stream();
+void* stream2 = cuda_create_stream();
+
+// Execute operations on streams
+// ...
+
+// Synchronize streams
+cuda_stream_synchronize(stream1);
+cuda_stream_synchronize(stream2);
+
+// Destroy streams
+cuda_destroy_stream(stream1);
+cuda_destroy_stream(stream2);
+```
+
+### Event Synchronization
+
+```python
+# Create events for synchronization
+event = nx.cuda.Event()
+
+with stream1:
+    result = compute_intensive_operation()
+    event.record()  # Record event in stream
+
+with stream2:
+    event.wait()  # Wait for event from stream1
+    next_operation(result)
+```
+
+## Multi-GPU Training
+
+### Data Parallel
+
+```python
+import neurenix as nx
+from neurenix.parallel import DataParallel
+
+model = MyModel()
+if nx.cuda.device_count() > 1:
+    model = DataParallel(model, device_ids=[0, 1, 2, 3])
+
+model = model.to('cuda')
+output = model(input)  # Automatically distributed across GPUs
+```
+
+### Distributed Training
+
+```python
+import neurenix.distributed as dist
+
+# Initialize distributed backend
+dist.init_process_group(backend='nccl')
+
+model = MyModel().to(f'cuda:{dist.get_rank()}')
+model = dist.DistributedDataParallel(model)
+
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        output = model(batch)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+```
+
+## Performance Optimization
+
+### Automatic Mixed Precision (AMP)
+
+```python
+from neurenix.amp import autocast, GradScaler
+
+model = MyModel().cuda()
+optimizer = nx.optim.Adam(model.parameters())
+scaler = GradScaler()
+
+for input, target in dataloader:
+    optimizer.zero_grad()
+    
+    # Use automatic mixed precision
+    with autocast():
+        output = model(input)
+        loss = criterion(output, target)
+    
+    # Scale gradients
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+```
+
+### Kernel Fusion
+
+```python
+# Enable kernel fusion for better performance
+nx.cuda.set_fusion_enabled(True)
+
+# Operations are automatically fused when beneficial
+output = (input + 1.0) * 2.0 - 0.5  # Single fused kernel
+```
+
+### Memory Optimization
+
+```python
+# Enable memory-efficient attention
+model = MyModel(use_flash_attention=True)
+
+# Gradient checkpointing for large models
+from neurenix.utils.checkpoint import checkpoint
+
+class LargeModel(nx.Module):
+    def forward(self, x):
+        # Use checkpointing to trade compute for memory
+        return checkpoint(self.expensive_layer, x)
+```
+
+## Profiling and Debugging
+
+### CUDA Profiler
+
+```python
+with nx.cuda.profile():
+    output = model(input)
+
+# View profiler results
+nx.cuda.profiler.export_chrome_trace("trace.json")
+```
+
+### Memory Profiling
+
+```python
+with nx.cuda.memory_profiler():
+    output = model(input)
+
+print(nx.cuda.memory_summary())
+```
+
+### Synchronous Debugging
+
+```python
+# Enable synchronous CUDA operations for debugging
+nx.cuda.set_sync_debug_mode(True)
+
+try:
+    result = model(input)
+except RuntimeError as e:
+    print(f"CUDA error: {e}")
+```
+
+## Environment Variables
+
+```bash
+# Select specific GPUs
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+
+# Enable TF32 for Ampere+ GPUs
+export NEURENIX_CUDA_ALLOW_TF32=1
+
+# Set memory allocation strategy
+export NEURENIX_CUDA_MEMORY_FRACTION=0.8
+
+# Enable debug mode
+export NEURENIX_CUDA_LAUNCH_BLOCKING=1
+```
+
+## Common Issues
+
+### Out of Memory
+
+```python
+# Reduce batch size
+batch_size = batch_size // 2
+
+# Enable gradient checkpointing
+model = MyModel(use_checkpointing=True)
+
+# Clear cache periodically
+if batch_idx % 100 == 0:
+    nx.cuda.empty_cache()
+```
+
+### Performance Issues
+
+```python
+# Profile to find bottlenecks
+with nx.cuda.profile():
+    output = model(input)
+
+# Enable cuDNN benchmarking
+nx.backends.cudnn.benchmark = True
+
+# Use mixed precision
+with nx.amp.autocast():
+    output = model(input)
+```
+
+## See Also
+
+- [Tensor Cores Documentation](https://docs.nvidia.com/deeplearning/performance/mixed-precision-training/)
+- [ROCm Support](/hardware/rocm) - AMD GPU alternative
+- [Multi-GPU Training](/training/distributed)
+- [Performance Optimization](/optimization/performance)

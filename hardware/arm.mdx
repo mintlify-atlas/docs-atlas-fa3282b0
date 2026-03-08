@@ -1,0 +1,474 @@
+---
+title: ARM Acceleration
+description: ARM processor acceleration with NEON, SVE, and Ethos-U NPU support
+---
+
+## Overview
+
+Neurenix provides comprehensive support for ARM processors, enabling efficient AI inference and training on ARM-based devices. The framework includes:
+
+- **ARM NEON**: SIMD instructions for accelerated vector operations
+- **ARM SVE**: Scalable Vector Extension for flexible vectorization
+- **ARM Compute Library**: Optimized neural network primitives
+- **ARM Ethos-U**: Neural Processing Unit for edge AI
+- **CPU optimization**: Multi-threading and cache-aware algorithms
+
+## Supported Platforms
+
+- ARM Cortex-A series (A53, A55, A57, A72, A76, A78, X1, X2)
+- ARM Neoverse (N1, N2, V1, V2)
+- Apple Silicon (M1, M2, M3 series)
+- Qualcomm Snapdragon
+- MediaTek Dimensity
+- NVIDIA Jetson (ARM CPU components)
+
+## Requirements
+
+- ARM processor with NEON support (ARMv7-A or later)
+- ARM Compute Library (optional, recommended)
+- GCC 9.0+ or Clang 10.0+ with ARM extensions
+
+## Installation
+
+```bash
+# Install Neurenix for ARM
+pip install neurenix
+
+# Build from source with ARM optimizations
+export NEURENIX_WITH_ARM=1
+export ARM_COMPUTE_LIB=/path/to/arm_compute
+pip install -e .
+
+# Install ARM Compute Library (optional)
+git clone https://github.com/ARM-software/ComputeLibrary.git
+cd ComputeLibrary
+scons Werror=0 -j8 debug=0 neon=1 opencl=0 embed_kernels=0 os=linux arch=arm64-v8a
+```
+
+## Device Detection
+
+### Check ARM Availability
+
+```python
+import neurenix as nx
+
+# Check ARM acceleration
+if nx.arm.is_available():
+    print("ARM acceleration is available")
+    print(f"ARM devices: {nx.arm.device_count()}")
+else:
+    print("ARM acceleration not available")
+```
+
+```cpp
+// C++ ARM detection
+#include "phynexus/hardware/arm.h"
+
+using namespace phynexus::hardware;
+
+if (arm_is_available()) {
+    int device_count = arm_get_device_count();
+    std::cout << "ARM devices: " << device_count << std::endl;
+}
+```
+
+### Get Device Properties
+
+```python
+props = nx.arm.get_device_properties(0)
+print(f"Device: {props.device_name}")
+print(f"NEON support: {props.has_neon}")
+print(f"SVE support: {props.has_sve}")
+if props.has_sve:
+    print(f"SVE vector length: {props.sve_vector_length} bits")
+print(f"Ethos-U NPU: {props.has_ethos_u}")
+```
+
+```cpp
+// C++ device properties
+ARMDeviceProperties props;
+if (arm_get_device_properties(0, &props)) {
+    std::cout << "Device: " << props.device_name << std::endl;
+    std::cout << "NEON: " << (props.has_neon ? "Yes" : "No") << std::endl;
+    std::cout << "SVE: " << (props.has_sve ? "Yes" : "No") << std::endl;
+    if (props.has_sve) {
+        std::cout << "SVE vector length: " << props.sve_vector_length << std::endl;
+    }
+}
+```
+
+## ARM NEON
+
+### Overview
+
+NEON provides 128-bit SIMD instructions for parallel processing of data:
+
+```python
+import neurenix as nx
+
+# Operations automatically use NEON when available
+a = nx.randn(1000, device='cpu')
+b = nx.randn(1000, device='cpu')
+c = a + b  # Uses NEON acceleration
+```
+
+### Explicit NEON Operations
+
+```python
+from neurenix.hardware import arm
+
+# NEON-accelerated addition
+a = nx.randn(1024)
+b = nx.randn(1024)
+c = arm.neon_add(a, b)
+
+# NEON-accelerated multiplication
+d = arm.neon_multiply(a, b)
+```
+
+```cpp
+// C++ NEON operations
+#include "phynexus/hardware/arm.h"
+
+using namespace phynexus::hardware;
+
+float* a = new float[1024];
+float* b = new float[1024];
+float* c = new float[1024];
+
+// NEON-accelerated add
+arm_neon_add(a, b, c, 1024);
+
+// NEON-accelerated multiply
+arm_neon_multiply(a, b, c, 1024);
+```
+
+### NEON Data Types
+
+NEON supports various data types:
+- `float32x4_t` - 4x 32-bit floats
+- `int32x4_t` - 4x 32-bit integers
+- `int16x8_t` - 8x 16-bit integers
+- `int8x16_t` - 16x 8-bit integers
+
+## ARM SVE (Scalable Vector Extension)
+
+### Overview
+
+SVE provides vector operations with runtime-determined vector lengths:
+
+```python
+from neurenix.hardware import arm
+
+# Check SVE support
+if arm.has_sve():
+    vector_length = arm.get_sve_vector_length()
+    print(f"SVE vector length: {vector_length} bits")
+    
+    # SVE-accelerated operations
+    a = nx.randn(2048)
+    b = nx.randn(2048)
+    c = arm.sve_add(a, b)
+```
+
+```cpp
+// C++ SVE operations
+#ifdef __ARM_FEATURE_SVE
+#include <arm_sve.h>
+
+using namespace phynexus::hardware;
+
+float* a = new float[2048];
+float* b = new float[2048];
+float* c = new float[2048];
+
+// SVE-accelerated operations
+arm_sve_add(a, b, c, 2048);
+arm_sve_multiply(a, b, c, 2048);
+#endif
+```
+
+### SVE Advantages
+
+- Vector length agnostic code
+- Future-proof for longer vectors
+- Improved performance on Neoverse and future ARM CPUs
+- Better handling of loop remainders
+
+## ARM Compute Library
+
+### Overview
+
+ARM Compute Library provides highly optimized functions for computer vision and machine learning:
+
+```python
+from neurenix.hardware import arm
+
+# Enable ARM Compute Library
+arm.set_compute_library_enabled(True)
+
+# Operations use ACL when beneficial
+conv = nx.nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
+input = nx.randn(1, 3, 224, 224)
+output = conv(input)  # Uses ACL optimized convolution
+```
+
+### Convolution with ACL
+
+```python
+from neurenix.hardware.arm import acl_conv2d
+
+# Explicit ACL convolution
+params = {
+    'batch_size': 1,
+    'input_channels': 3,
+    'input_height': 224,
+    'input_width': 224,
+    'output_channels': 64,
+    'kernel_height': 3,
+    'kernel_width': 3,
+    'stride_height': 1,
+    'stride_width': 1,
+    'padding_height': 1,
+    'padding_width': 1
+}
+
+output = acl_conv2d(input, weights, bias, params)
+```
+
+```cpp
+// C++ ACL convolution
+#include "phynexus/hardware/arm.h"
+
+using namespace phynexus::hardware;
+
+Conv2DParams params;
+params.batch_size = 1;
+params.input_channels = 3;
+params.input_height = 224;
+params.input_width = 224;
+params.output_channels = 64;
+params.kernel_height = 3;
+params.kernel_width = 3;
+params.stride_height = 1;
+params.stride_width = 1;
+params.padding_height = 1;
+params.padding_width = 1;
+
+arm_acl_conv2d(input_data, weights_data, bias_data, output_data, params);
+```
+
+## ARM Ethos-U NPU
+
+### Overview
+
+Ethos-U is ARM's neural processing unit for edge AI, providing:
+- Efficient inference for quantized models
+- Low power consumption
+- Integration with Cortex-M processors
+
+```python
+from neurenix.hardware import arm
+
+# Check Ethos-U availability
+if arm.has_ethos_u():
+    print("Ethos-U NPU available")
+    
+    # Compile model for Ethos-U
+    model = MyModel()
+    ethos_model = arm.compile_for_ethos_u(
+        model,
+        input_shape=(1, 3, 224, 224),
+        quantization='int8'
+    )
+    
+    # Run inference on Ethos-U
+    output = ethos_model(input)
+```
+
+### Quantization for Ethos-U
+
+```python
+from neurenix.quantization import quantize_model
+
+# Quantize model for Ethos-U
+quantized_model = quantize_model(
+    model,
+    calibration_data=calibration_loader,
+    quantization_scheme='int8',
+    target='ethos-u'
+)
+
+# Deploy to Ethos-U
+ethos_model = arm.deploy_to_ethos_u(quantized_model)
+```
+
+## Multi-Threading
+
+### Configure Thread Pool
+
+```python
+import neurenix as nx
+
+# Set number of threads for ARM operations
+nx.set_num_threads(4)
+
+# Get current thread count
+num_threads = nx.get_num_threads()
+print(f"Using {num_threads} threads")
+
+# Use all available cores
+import os
+nx.set_num_threads(os.cpu_count())
+```
+
+### Thread Affinity
+
+```python
+# Set thread affinity for better performance
+nx.arm.set_thread_affinity([
+    [0, 1],      # Threads 0-1 on cores 0-1 (efficiency cores)
+    [2, 3, 4, 5] # Threads 2-5 on cores 2-5 (performance cores)
+])
+```
+
+## Memory Management
+
+### Aligned Allocation
+
+```python
+# Allocate aligned memory for SIMD
+tensor = nx.empty(1024, dtype=nx.float32, aligned=64)  # 64-byte alignment
+```
+
+```cpp
+// C++ aligned memory
+void* ptr;
+arm_malloc(&ptr, 1024 * sizeof(float));  // 64-byte aligned
+// ... use memory ...
+arm_free(ptr);
+```
+
+### Memory Copy
+
+```cpp
+// Optimized memory copy
+float* src = new float[1024];
+float* dst = new float[1024];
+
+arm_memcpy_device_to_device(dst, src, 1024 * sizeof(float));
+```
+
+## Performance Optimization
+
+### Best Practices
+
+1. **Use appropriate data types**
+```python
+# Use float16 on ARM for better performance
+model = model.half()  # Convert to FP16
+input = input.half()
+output = model(input)
+```
+
+2. **Enable kernel fusion**
+```python
+nx.arm.set_fusion_enabled(True)
+```
+
+3. **Optimize tensor layout**
+```python
+# Use NHWC layout for better cache locality
+tensor = tensor.to_nhwc()  # Convert from NCHW to NHWC
+```
+
+4. **Use ARM Compute Library**
+```python
+nx.backends.arm_compute_lib.enabled = True
+```
+
+### Profiling
+
+```python
+# Profile ARM operations
+with nx.arm.profiler.profile():
+    output = model(input)
+
+# Print profiling results
+print(nx.arm.profiler.key_averages())
+```
+
+## Mobile and Edge Deployment
+
+### Model Optimization
+
+```python
+from neurenix.mobile import optimize_for_mobile
+
+# Optimize model for ARM mobile devices
+mobile_model = optimize_for_mobile(
+    model,
+    target='arm',
+    quantization='int8',
+    optimize_for_latency=True
+)
+
+# Export for deployment
+mobile_model.save('model_arm.ptl')
+```
+
+### Android Deployment
+
+```python
+# Export for Android (ARM)
+from neurenix.mobile import export_to_android
+
+export_to_android(
+    model,
+    'model.pt',
+    use_neon=True,
+    use_arm_compute_lib=True
+)
+```
+
+## Environment Variables
+
+```bash
+# Set number of threads
+export OMP_NUM_THREADS=4
+export NEURENIX_NUM_THREADS=4
+
+# Enable ARM Compute Library
+export NEURENIX_ARM_USE_ACL=1
+
+# Set thread affinity
+export NEURENIX_ARM_THREAD_AFFINITY=0-3
+
+# Enable NEON
+export NEURENIX_ARM_USE_NEON=1
+```
+
+## Benchmarking
+
+```python
+import neurenix as nx
+from neurenix.benchmark import benchmark
+
+# Benchmark ARM operations
+results = benchmark(
+    model,
+    input_shape=(1, 3, 224, 224),
+    device='cpu',
+    num_iterations=100
+)
+
+print(f"Average latency: {results.mean_ms:.2f} ms")
+print(f"Throughput: {results.throughput:.2f} fps")
+```
+
+## See Also
+
+- [ARM Compute Library](https://github.com/ARM-software/ComputeLibrary)
+- [ARM NEON Programmer's Guide](https://developer.arm.com/architectures/instruction-sets/intrinsics/)
+- [NPU Support](/hardware/npu) - Neural Processing Units
+- [Mobile Deployment](/deployment/mobile)

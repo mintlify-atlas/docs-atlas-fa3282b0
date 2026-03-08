@@ -1,97 +1,128 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Neurenix Documentation"
+description: "AI framework optimized for edge devices with support for multi-agent systems, reinforcement learning, and distributed training"
 ---
 
-## Setting up
+<div style={{
+  background: 'linear-gradient(135deg, #181818 0%, #212430 100%)',
+  borderRadius: '0px',
+  padding: '48px 32px',
+  marginBottom: '32px',
+  border: '1px solid transparent'
+}}>
+  <h1 style={{
+    fontSize: '48px',
+    fontWeight: '700',
+    marginBottom: '16px',
+    color: '#ffffff',
+    fontFamily: 'Inter'
+  }}>
+    Empowering Intelligent Futures, One Edge at a Time
+  </h1>
+  <p style={{
+    fontSize: '18px',
+    color: '#c0d2d5',
+    marginBottom: '24px',
+    fontFamily: 'Inter'
+  }}>
+    Neurenix is an AI framework optimized for embedded devices (Edge AI) with support for multi-agent systems, reinforcement learning, and distributed clusters.
+  </p>
+  <div style={{ display: 'flex', gap: '12px' }}>
+    <a href="/quickstart" style={{
+      background: '#000000',
+      color: '#ffffff',
+      padding: '12px 24px',
+      borderRadius: '0px',
+      textDecoration: 'none',
+      fontWeight: '600',
+      fontFamily: 'Inter'
+    }}>
+      Get Started
+    </a>
+    <a href="https://github.com/MilesONerd/neurenix" style={{
+      background: 'transparent',
+      color: '#ffffff',
+      padding: '12px 24px',
+      borderRadius: '0px',
+      textDecoration: 'none',
+      fontWeight: '600',
+      border: '1px solid #ffffff',
+      fontFamily: 'Inter'
+    }}>
+      View on GitHub
+    </a>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## Key Features
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={3}>
+  <Card title="Edge AI Optimized" icon="microchip">
+    Purpose-built for embedded devices and edge computing with hot-swappable backends
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Multi-Agent Systems" icon="users">
+    Native support for AI agents and multi-agent systems with coordination mechanisms
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Reinforcement Learning" icon="brain">
+    Comprehensive RL algorithms including DQN, PPO, SAC, A2C, and DDPG
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Distributed Training" icon="network-wired">
+    Scale with MPI, Horovod, and DeepSpeed for large-scale model training
   </Card>
-</Columns>
+  <Card title="Hardware Acceleration" icon="bolt">
+    Multi-backend support: CUDA, ROCm, Vulkan, ARM, NPU, TPU, and more
+  </Card>
+  <Card title="Quantum Computing" icon="atom">
+    Integration with Qiskit and Cirq for hybrid quantum-classical computing
+  </Card>
+</CardGroup>
 
-## Create beautiful pages
+## Quick Start
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Neurenix with pip and get started in minutes
+  </Card>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Build your first AI agent in under 5 minutes
+  </Card>
+  <Card title="Core Concepts" icon="book" href="/core/architecture">
+    Learn about tensors, devices, and neural networks
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/tensor">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Advanced Capabilities
 
-## Need inspiration?
+<CardGroup cols={2}>
+  <Card title="Graph Neural Networks" icon="project-diagram" href="/modules/gnn">
+    GCN, GAT, GraphSAGE and more for graph-structured data
+  </Card>
+  <Card title="Federated Learning" icon="shield-halved" href="/advanced/federated-learning">
+    Secure, privacy-preserving distributed learning
+  </Card>
+  <Card title="AutoML" icon="wand-magic-sparkles" href="/advanced/automl">
+    Automated hyperparameter tuning and neural architecture search
+  </Card>
+  <Card title="Explainability" icon="magnifying-glass" href="/modules/explainability">
+    SHAP, LIME, and feature importance for model interpretability
+  </Card>
+</CardGroup>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Community
+
+Join our growing community of AI developers and researchers.
+
+<CardGroup cols={3}>
+  <Card title="GitHub" icon="github" href="https://github.com/MilesONerd/neurenix">
+    Star us on GitHub
+  </Card>
+  <Card title="Discord" icon="discord" href="https://discord.gg/Eqnhr8tK2G">
+    Join our Discord
+  </Card>
+  <Card title="Twitter" icon="x-twitter" href="https://x.com/neurenix">
+    Follow us on X
+  </Card>
+</CardGroup>

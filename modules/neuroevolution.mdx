@@ -1,0 +1,495 @@
+---
+title: Neuroevolution
+description: Evolutionary algorithms for neural network optimization
+---
+
+# Neuroevolution
+
+The neuroevolution module provides evolutionary algorithms for optimizing neural network topologies and weights, including NEAT, HyperNEAT, and CMA-ES. These methods are particularly effective for reinforcement learning and optimization problems where gradient-based methods struggle.
+
+## Overview
+
+Neuroevolution evolves neural networks through:
+- **Topology Evolution**: Discovering optimal network architectures
+- **Weight Optimization**: Finding effective connection weights
+- **Feature Learning**: Evolving representations without supervision
+
+## NEAT (NeuroEvolution of Augmenting Topologies)
+
+NEAT evolves both the topology and weights of neural networks simultaneously, starting from minimal structures and complexifying over generations.
+
+### Basic Usage
+
+```python
+from neurenix.neuroevolution import NEAT, NEATConfig
+
+# Configure NEAT
+config = NEATConfig()
+config.population_size = 150
+config.compatibility_threshold = 3.0
+config.species_elitism = 0.2
+config.add_node_mutation_rate = 0.03
+config.add_connection_mutation_rate = 0.05
+
+# Initialize NEAT
+neat = NEAT(config)
+neat.initialize(
+    population_size=150,
+    num_inputs=4,
+    num_outputs=1
+)
+
+# Define fitness function
+def evaluate_genome(genome):
+    network = neat.get_network(genome)
+    fitness = 0.0
+    
+    # Evaluate on XOR problem
+    test_cases = [
+        ([0, 0], 0),
+        ([0, 1], 1),
+        ([1, 0], 1),
+        ([1, 1], 0)
+    ]
+    
+    for inputs, expected in test_cases:
+        output = network(nx.tensor([inputs]))
+        error = (output.item() - expected) ** 2
+        fitness -= error
+    
+    return fitness
+
+# Evolve for multiple generations
+for generation in range(100):
+    neat.evolve(evaluate_genome)
+    
+    best = neat.get_best_genome()
+    print(f"Generation {generation}: Best Fitness = {best.fitness:.4f}")
+
+# Get the best network
+best_genome = neat.get_best_genome()
+best_network = neat.get_network(best_genome)
+```
+
+### NEAT Configuration
+
+```python
+config = NEATConfig()
+
+# Species parameters
+config.compatibility_threshold = 3.0
+config.excess_coefficient = 1.0
+config.weight_coefficient = 0.4
+config.species_elitism = 0.2
+config.species_stagnation_threshold = 15
+
+# Mutation rates
+config.weight_mutation_rate = 0.8
+config.weight_perturb_prob = 0.9
+config.add_node_mutation_rate = 0.03
+config.add_connection_mutation_rate = 0.05
+
+# Reproduction
+config.asexual_reproduction_rate = 0.25
+
+# Activation functions
+config.activation_functions = ['sigmoid', 'tanh', 'relu']
+```
+
+### Working with Genomes
+
+```python
+from neurenix.neuroevolution import NEATGenome, NodeGene, ConnectionGene, NodeType
+
+# Create a genome manually
+genome = NEATGenome()
+
+# Add input nodes
+for i in range(2):
+    node = NodeGene(i, NodeType.INPUT)
+    genome.add_node(node)
+
+# Add output node
+output_node = NodeGene(2, NodeType.OUTPUT)
+genome.add_node(output_node)
+
+# Add connections
+conn1 = ConnectionGene(0, 2, weight=0.5, innovation=0)
+conn2 = ConnectionGene(1, 2, weight=-0.3, innovation=1)
+genome.add_connection(conn1)
+genome.add_connection(conn2)
+
+# Mutate genome
+genome.mutate_weight()
+genome.mutate_add_node(innovation_history)
+```
+
+## HyperNEAT
+
+HyperNEAT extends NEAT to evolve large-scale networks by using a CPPN (Compositional Pattern Producing Network) to generate connection weights based on geometric patterns.
+
+```python
+from neurenix.neuroevolution import HyperNEAT, Substrate, NEATConfig
+
+# Define substrate (network geometry)
+input_coords = [
+    [-1.0, -1.0],
+    [-1.0, 1.0],
+    [1.0, -1.0],
+    [1.0, 1.0]
+]
+
+hidden_coords = [
+    [-0.5, 0.0],
+    [0.0, 0.0],
+    [0.5, 0.0]
+]
+
+output_coords = [
+    [0.0, 1.0]
+]
+
+substrate = Substrate(
+    input_coords=input_coords,
+    hidden_coords=hidden_coords,
+    output_coords=output_coords
+)
+
+# Initialize HyperNEAT
+config = NEATConfig()
+hyperneat = HyperNEAT(
+    substrate=substrate,
+    neat_config=config,
+    weight_threshold=0.2,
+    activation='tanh'
+)
+
+# Initialize population of CPPNs
+hyperneat.initialize(population_size=100)
+
+# Define fitness function
+def evaluate_network(network):
+    fitness = 0.0
+    # Evaluate network performance
+    for inputs, target in test_data:
+        output = network(nx.tensor([inputs]))
+        fitness += compute_fitness(output, target)
+    return fitness
+
+# Evolve
+hyperneat.evolve(
+    fitness_function=evaluate_network,
+    generations=50
+)
+
+# Get best network
+best_network = hyperneat.get_best_network()
+```
+
+### Custom Substrate
+
+```python
+# 2D grid substrate for image processing
+width, height = 28, 28
+input_coords = [
+    [x / width, y / height] 
+    for x in range(width) 
+    for y in range(height)
+]
+
+output_coords = [[0.5, 0.5 + i/10] for i in range(10)]  # 10 classes
+
+substrate = Substrate(
+    input_coords=input_coords,
+    output_coords=output_coords
+)
+```
+
+## CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
+
+CMA-ES is a state-of-the-art evolutionary algorithm for continuous optimization.
+
+```python
+from neurenix.neuroevolution import CMAES, CMAESConfig
+import numpy as np
+
+# Configure CMA-ES
+config = CMAESConfig(
+    sigma=0.5,              # Initial step size
+    population_size=None,   # Auto-determined
+    max_iterations=1000
+)
+
+# Initialize CMA-ES
+dimension = 10
+initial_mean = np.zeros(dimension)
+cmaes = CMAES(dimension, initial_mean, config)
+
+# Define objective function (minimize)
+def sphere_function(x):
+    return np.sum(x ** 2)
+
+# Optimize
+best_solution, best_fitness = cmaes.optimize(
+    objective_function=sphere_function,
+    iterations=100
+)
+
+print(f"Best solution: {best_solution}")
+print(f"Best fitness: {best_fitness}")
+```
+
+### Optimizing Neural Networks with CMA-ES
+
+```python
+from neurenix.neuroevolution import CMAESModel
+from neurenix.nn import Sequential, Linear
+import neurenix as nx
+
+# Define model
+model = Sequential(
+    Linear(10, 32),
+    nx.nn.ReLU(),
+    Linear(32, 1)
+)
+
+# Create CMA-ES optimizer
+cmaes_model = CMAESModel(model, config)
+
+# Training data
+X_train = nx.randn(1000, 10)
+y_train = nx.randn(1000, 1)
+
+# Loss function
+def mse_loss(pred, target):
+    return ((pred - target) ** 2).mean().item()
+
+# Optimize
+best_loss = cmaes_model.fit(
+    X_train,
+    y_train,
+    loss_fn=mse_loss,
+    iterations=100,
+    verbose=True
+)
+
+print(f"Best loss: {best_loss}")
+```
+
+### CMA-ES Configuration
+
+```python
+config = CMAESConfig(
+    sigma=0.5,                    # Initial step size
+    population_size=None,         # Auto: 4 + floor(3*log(N))
+    parent_number=None,           # Auto: population_size // 2
+    weights_option='default',     # 'default', 'equal', 'linear'
+    active=True,                  # Use active CMA
+    diagonal_iterations=0,        # Diagonal covariance iterations
+    tolx=1e-12,                   # Tolerance for x changes
+    tolfun=1e-12,                 # Tolerance for function changes
+    tolstagnation=100,            # Stagnation tolerance
+    max_iterations=1000
+)
+```
+
+## Evolution Strategies
+
+General evolution strategies framework.
+
+```python
+from neurenix.neuroevolution import EvolutionStrategy, ESConfig
+
+config = ESConfig(
+    population_size=50,
+    elite_size=10,
+    mutation_rate=0.1,
+    mutation_strength=0.01
+)
+
+es = EvolutionStrategy(config)
+
+# Initialize population
+es.initialize(dimension=100)
+
+# Evolution loop
+for generation in range(100):
+    # Evaluate population
+    fitnesses = [evaluate(individual) for individual in es.population]
+    
+    # Update
+    es.update(fitnesses)
+    
+    print(f"Gen {generation}: Best = {es.best_fitness:.4f}")
+```
+
+## Genetic Algorithms
+
+```python
+from neurenix.neuroevolution import (
+    GeneticAlgorithm,
+    Population,
+    Individual,
+    Crossover,
+    Mutation,
+    Selection
+)
+
+# Create genetic algorithm
+ga = GeneticAlgorithm(
+    population_size=100,
+    chromosome_length=50,
+    mutation_rate=0.01,
+    crossover_rate=0.7
+)
+
+# Define fitness function
+def fitness_function(individual):
+    return sum(individual.genes)
+
+# Evolve
+for generation in range(100):
+    ga.evaluate(fitness_function)
+    ga.selection(method='tournament', tournament_size=3)
+    ga.crossover(method='single_point')
+    ga.mutation(method='bit_flip')
+    
+    best = ga.get_best_individual()
+    print(f"Gen {generation}: Fitness = {best.fitness}")
+```
+
+## Example: Cart-Pole with NEAT
+
+```python
+import neurenix as nx
+from neurenix.neuroevolution import NEAT, NEATConfig
+import gym
+
+def evaluate_cartpole(genome, neat):
+    """Evaluate genome on CartPole environment"""
+    env = gym.make('CartPole-v1')
+    network = neat.get_network(genome)
+    
+    total_reward = 0
+    num_episodes = 5
+    
+    for episode in range(num_episodes):
+        observation = env.reset()
+        done = False
+        episode_reward = 0
+        
+        while not done:
+            # Get action from network
+            output = network(nx.tensor([observation]))
+            action = 1 if output.item() > 0.5 else 0
+            
+            # Step environment
+            observation, reward, done, _ = env.step(action)
+            episode_reward += reward
+            
+            if done:
+                break
+        
+        total_reward += episode_reward
+    
+    env.close()
+    return total_reward / num_episodes
+
+# Setup NEAT
+config = NEATConfig()
+config.population_size = 150
+neat = NEAT(config)
+neat.initialize(population_size=150, num_inputs=4, num_outputs=1)
+
+# Evolve
+for generation in range(50):
+    neat.evolve(lambda g: evaluate_cartpole(g, neat))
+    
+    best = neat.get_best_genome()
+    print(f"Generation {generation}: Fitness = {best.fitness:.2f}")
+    
+    # Stop if solved
+    if best.fitness >= 195:
+        print("Environment solved!")
+        break
+```
+
+## Example: Function Optimization with CMA-ES
+
+```python
+import numpy as np
+from neurenix.neuroevolution import CMAES, CMAESConfig
+
+# Rastrigin function (challenging multi-modal optimization)
+def rastrigin(x):
+    A = 10
+    n = len(x)
+    return A * n + np.sum(x**2 - A * np.cos(2 * np.pi * x))
+
+# Initialize CMA-ES
+config = CMAESConfig(
+    sigma=0.5,
+    max_iterations=300
+)
+
+dimension = 10
+initial_mean = np.random.randn(dimension) * 2
+cmaes = CMAES(dimension, initial_mean, config)
+
+# Optimize
+for iteration in range(300):
+    # Ask for new candidate solutions
+    solutions = cmaes.ask()
+    
+    # Evaluate
+    fitnesses = [rastrigin(x) for x in solutions]
+    
+    # Tell results back to optimizer
+    cmaes.tell(solutions, fitnesses)
+    
+    if iteration % 10 == 0:
+        best_sol, best_fit = cmaes.get_best()
+        print(f"Iteration {iteration}: Best = {best_fit:.6f}")
+
+best_solution, best_fitness = cmaes.get_best()
+print(f"\nOptimization complete!")
+print(f"Best solution: {best_solution}")
+print(f"Best fitness: {best_fitness}")
+```
+
+## Best Practices
+
+1. **Population Size**: Larger populations explore more thoroughly but evolve slower
+2. **Mutation Rates**: Start with low rates and adjust based on performance
+3. **Fitness Evaluation**: Use multiple trials to reduce noise
+4. **Speciation**: NEAT's speciation protects innovation and prevents premature convergence
+5. **Termination**: Monitor both fitness improvement and population diversity
+
+## When to Use Neuroevolution
+
+**Use NEAT when:**
+- Network topology is unknown
+- Starting from minimal structures
+- Sparse connectivity is desired
+
+**Use HyperNEAT when:**
+- Large-scale networks are needed
+- Geometric patterns are important
+- Regular structure is beneficial
+
+**Use CMA-ES when:**
+- Optimizing continuous parameters
+- Gradient information is unavailable
+- Robustness to noise is needed
+
+## References
+
+- Stanley & Miikkulainen (2002) - "Evolving Neural Networks through Augmenting Topologies"
+- Stanley et al. (2009) - "A Hypercube-Based Indirect Encoding for Evolving Large-Scale Neural Networks"
+- Hansen & Ostermeier (2001) - "Completely Derandomized Self-Adaptation in Evolution Strategies"
+
+## See Also
+
+- [Reinforcement Learning](/modules/reinforcement-learning)
+- [Optimization](/guides/optimization)
+- [Neural Architecture Search](/guides/nas)

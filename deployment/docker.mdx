@@ -1,0 +1,469 @@
+---
+title: Docker Containerization
+description: Package and deploy Neurenix models using Docker containers
+---
+
+## Overview
+
+Neurenix provides comprehensive Docker integration for containerizing models and applications, making deployment and scaling easier across different environments.
+
+## Quick Start
+
+### Build a Docker Image
+
+```python
+from neurenix.docker import ImageBuilder
+
+builder = ImageBuilder()
+
+# Create a Neurenix-ready Dockerfile
+builder.create_neurenix_dockerfile(
+    output_path="./Dockerfile",
+    cuda=False,  # Set to True for GPU support
+    python_version="3.9",
+    additional_packages=["fastapi", "uvicorn"]
+)
+
+# Build the image
+image_id = builder.build(
+    tag="neurenix-model:latest",
+    context="."
+)
+```
+
+### Run a Container
+
+```python
+from neurenix.docker import Container, ContainerConfig
+
+config = ContainerConfig(
+    image="neurenix-model:latest",
+    ports={"8000/tcp": "8000"},
+    environment={
+        "MODEL_PATH": "/app/model.nx",
+        "DEVICE": "cpu"
+    },
+    volumes={
+        "/app/models": {
+            "./models": "rw"
+        }
+    }
+)
+
+container = Container()
+container_id = container.create(config)
+container.start()
+
+print(f"Container {container_id} started")
+```
+
+## ImageBuilder
+
+The `ImageBuilder` class helps create and build Docker images.
+
+### Creating Custom Dockerfiles
+
+```python
+from neurenix.docker import ImageBuilder
+
+builder = ImageBuilder()
+
+commands = [
+    "apt-get update && apt-get install -y git",
+    "pip install --no-cache-dir numpy scipy",
+    "mkdir -p /app/models",
+    "COPY model.nx /app/models/",
+    "COPY serve.py /app/"
+]
+
+dockerfile_path = builder.create_dockerfile(
+    base_image="python:3.9-slim",
+    commands=commands,
+    output_path="./Dockerfile",
+    workdir="/app",
+    env={"PYTHONUNBUFFERED": "1"},
+    expose=["8000"],
+    cmd=["python", "serve.py"]
+)
+```
+
+### Creating Neurenix-Specific Dockerfiles
+
+```python
+# CPU-only deployment
+builder.create_neurenix_dockerfile(
+    output_path="./Dockerfile",
+    cuda=False,
+    python_version="3.9",
+    neurenix_version="1.0.0",  # Specify version
+    additional_packages=["fastapi", "uvicorn", "onnx"],
+    entrypoint=["python"],
+    cmd=["serve.py"]
+)
+
+# GPU deployment with CUDA
+builder.create_neurenix_dockerfile(
+    output_path="./Dockerfile.cuda",
+    cuda=True,
+    python_version="3.9",
+    additional_packages=["cupy-cuda116"],
+    entrypoint=["python"],
+    cmd=["serve.py"]
+)
+```
+
+### Building Images
+
+```python
+builder = ImageBuilder(path="./my-app")
+
+# Basic build
+image_id = builder.build(tag="myapp:latest")
+
+# Build with arguments
+image_id = builder.build(
+    tag="myapp:v1.0",
+    dockerfile="./Dockerfile",
+    context=".",
+    build_args={
+        "NEURENIX_VERSION": "1.0.0",
+        "PYTHON_VERSION": "3.9"
+    },
+    no_cache=False,
+    pull=True,
+    platform="linux/amd64",
+    labels={
+        "version": "1.0",
+        "maintainer": "team@example.com"
+    }
+)
+```
+
+## Image Management
+
+The `Image` class provides operations for managing Docker images.
+
+### Working with Images
+
+```python
+from neurenix.docker import Image
+
+image = Image("neurenix-model:latest")
+
+# Check if image exists
+if image.exists():
+    print("Image found")
+else:
+    image.pull()  # Pull from registry
+
+# Tag an image
+image.tag("myregistry.com/neurenix-model:v1.0")
+
+# Push to registry
+image.push()
+
+# Inspect image
+info = image.inspect()
+print(f"Created: {info['Created']}")
+print(f"Size: {info['Size']} bytes")
+
+# Save to file
+image.save("neurenix-model.tar")
+
+# Load from file
+image.load("neurenix-model.tar")
+
+# Remove image
+image.remove(force=True)
+```
+
+## Container Management
+
+The `Container` class provides comprehensive container lifecycle management.
+
+### Container Configuration
+
+```python
+from neurenix.docker import ContainerConfig
+
+config = ContainerConfig(
+    image="neurenix-model:latest",
+    command=["python", "serve.py"],
+    entrypoint=["python"],
+    environment={
+        "MODEL_PATH": "/app/model.nx",
+        "PORT": "8000",
+        "LOG_LEVEL": "info"
+    },
+    volumes={
+        "/app/models": {"./models": "ro"},
+        "/app/data": {"./data": "rw"}
+    },
+    ports={
+        "8000/tcp": "8000",
+        "8001/tcp": "8001"
+    },
+    working_dir="/app",
+    user="neurenix",
+    network="bridge",
+    hostname="neurenix-server",
+    memory="2g",
+    cpus=2.0
+)
+```
+
+### GPU Support
+
+```python
+# Enable GPU access
+config = ContainerConfig(
+    image="neurenix-model:cuda",
+    gpu=True,  # Enable all GPUs
+    runtime="nvidia",
+    environment={"CUDA_VISIBLE_DEVICES": "0,1"}
+)
+
+container = Container()
+container.create(config)
+container.start()
+```
+
+### Container Operations
+
+```python
+from neurenix.docker import Container
+
+container = Container()
+
+# Create container
+container_id = container.create(config)
+print(f"Created: {container_id}")
+
+# Start container
+container.start()
+
+# Stop container
+container.stop(timeout=10)
+
+# Get logs
+logs = container.logs(tail="100")
+print(logs)
+
+# Follow logs in real-time
+logs = container.logs(follow=True)
+
+# Execute command in container
+output = container.exec(["ls", "-la", "/app"])
+print(output)
+
+# Interactive execution
+container.exec("bash", interactive=True)
+
+# Inspect container
+info = container.inspect()
+print(f"Status: {info['State']['Status']}")
+print(f"IP: {info['NetworkSettings']['IPAddress']}")
+
+# Wait for container to exit
+exit_code = container.wait()
+print(f"Exit code: {exit_code}")
+
+# Copy files to/from container
+container.copy_to("./model.nx", "/app/model.nx")
+container.copy_from("/app/logs/app.log", "./app.log")
+
+# Remove container
+container.remove(force=True)
+```
+
+## Complete Deployment Example
+
+Here's a complete workflow for deploying a Neurenix model:
+
+### 1. Create Application Structure
+
+```
+my-neurenix-app/
+├── Dockerfile
+├── requirements.txt
+├── serve.py
+├── model.nx
+└── models/
+```
+
+### 2. Create Serving Script
+
+```python
+# serve.py
+import os
+from neurenix import load_model
+from neurenix.api_support import create_rest_server
+
+model_path = os.getenv("MODEL_PATH", "model.nx")
+port = int(os.getenv("PORT", "8000"))
+
+print(f"Loading model from {model_path}")
+model = load_model(model_path)
+
+print(f"Starting server on port {port}")
+server = create_rest_server(host="0.0.0.0", port=port)
+server.add_model("model", model)
+server.start()
+
+# Keep running
+import time
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    server.stop()
+```
+
+### 3. Build and Deploy
+
+```python
+from neurenix.docker import ImageBuilder, Container, ContainerConfig
+
+# Create Dockerfile
+builder = ImageBuilder()
+builder.create_neurenix_dockerfile(
+    output_path="./Dockerfile",
+    additional_packages=["fastapi", "uvicorn"],
+    cmd=["python", "serve.py"]
+)
+
+# Build image
+image_id = builder.build(
+    tag="my-neurenix-app:latest",
+    context="."
+)
+
+# Create and start container
+config = ContainerConfig(
+    image="my-neurenix-app:latest",
+    ports={"8000/tcp": "8000"},
+    environment={
+        "MODEL_PATH": "/app/model.nx",
+        "PORT": "8000"
+    },
+    volumes={
+        "/app": {".": "rw"}
+    },
+    memory="2g",
+    cpus=2.0
+)
+
+container = Container()
+container.create(config)
+container.start()
+
+print("Model server running at http://localhost:8000")
+```
+
+## Docker Compose Integration
+
+Create a `docker-compose.yml` for multi-container deployments:
+
+```yaml
+version: '3.8'
+
+services:
+  neurenix-api:
+    build: .
+    image: neurenix-model:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/models/model.nx
+      - DEVICE=cuda
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs:rw
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - neurenix-api
+```
+
+## Registry Operations
+
+```python
+from neurenix.docker import Registry, RegistryAuth
+
+# Authenticate to registry
+auth = RegistryAuth(
+    username="myuser",
+    password="mypass",
+    registry="myregistry.com"
+)
+
+registry = Registry(auth)
+
+# Push image
+registry.push("neurenix-model:latest")
+
+# Pull image
+registry.pull("myregistry.com/neurenix-model:v1.0")
+```
+
+## Best Practices
+
+1. **Multi-Stage Builds**: Use multi-stage Dockerfiles to reduce image size
+2. **Layer Caching**: Order Dockerfile commands from least to most frequently changing
+3. **Security**: Run containers as non-root users
+4. **Resource Limits**: Set memory and CPU limits to prevent resource exhaustion
+5. **Health Checks**: Implement health check endpoints for container orchestration
+6. **Logging**: Use structured logging and mount log volumes
+7. **Secrets Management**: Use Docker secrets or environment variables for sensitive data
+8. **Image Tagging**: Use semantic versioning for image tags
+
+## Troubleshooting
+
+### Check Docker Installation
+
+The container classes automatically check for Docker:
+
+```python
+try:
+    container = Container()
+except RuntimeError as e:
+    print(f"Docker error: {e}")
+    # Install Docker or start Docker daemon
+```
+
+### Debug Container Issues
+
+```python
+# View detailed logs
+logs = container.logs(tail="all")
+print(logs)
+
+# Inspect container state
+info = container.inspect()
+print(f"State: {info['State']}")
+print(f"Exit Code: {info['State']['ExitCode']}")
+
+# Execute diagnostic commands
+container.exec(["df", "-h"])  # Check disk space
+container.exec(["free", "-m"])  # Check memory
+container.exec(["nvidia-smi"])  # Check GPU (if available)
+```
+
+## Next Steps
+
+- [Scale with Kubernetes](/deployment/kubernetes)
+- [API Serving](/deployment/api-serving)
+- [Edge Device Deployment](/deployment/edge-devices)

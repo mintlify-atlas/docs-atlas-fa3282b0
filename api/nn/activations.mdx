@@ -1,0 +1,303 @@
+---
+title: 'Activation Functions'
+description: 'Non-linear activation functions for neural networks'
+---
+
+## Overview
+
+Activation functions introduce non-linearity into neural networks, enabling them to learn complex patterns.
+
+## ReLU
+
+```python
+class ReLU(Activation):
+    def __init__(self, inplace: bool = False)
+```
+
+Rectified Linear Unit: `ReLU(x) = max(0, x)`
+
+### Parameters
+
+<ParamField path="inplace" type="bool" default="False">
+  If True, does the operation in-place.
+</ParamField>
+
+### Example
+
+```python
+import neurenix as nx
+
+relu = nx.ReLU()
+x = nx.Tensor([[-1, 2], [3, -4]])
+output = relu(x)
+print(output)  # [[0, 2], [3, 0]]
+```
+
+## Sigmoid
+
+```python
+class Sigmoid(Activation):
+    def __init__(self)
+```
+
+Sigmoid function: `Sigmoid(x) = 1 / (1 + exp(-x))`
+
+Outputs values in the range (0, 1).
+
+### Example
+
+```python
+sigmoid = nx.Sigmoid()
+x = nx.Tensor([0, 1, -1, 2, -2])
+output = sigmoid(x)
+# Output: [0.5, 0.73, 0.27, 0.88, 0.12] (approximate)
+```
+
+## Tanh
+
+```python
+class Tanh(Activation):
+    def __init__(self)
+```
+
+Hyperbolic tangent: `Tanh(x) = (exp(x) - exp(-x)) / (exp(x) + exp(-x))`
+
+Outputs values in the range (-1, 1).
+
+### Example
+
+```python
+tanh = nx.Tanh()
+x = nx.Tensor([0, 1, -1, 2, -2])
+output = tanh(x)
+# Output: [0, 0.76, -0.76, 0.96, -0.96] (approximate)
+```
+
+## LeakyReLU
+
+```python
+class LeakyReLU(Activation):
+    def __init__(self, negative_slope: float = 0.01, inplace: bool = False)
+```
+
+Leaky Rectified Linear Unit: `LeakyReLU(x) = max(0, x) + negative_slope * min(0, x)`
+
+### Parameters
+
+<ParamField path="negative_slope" type="float" default="0.01">
+  Controls the angle of the negative slope.
+</ParamField>
+
+<ParamField path="inplace" type="bool" default="False">
+  If True, does the operation in-place.
+</ParamField>
+
+### Example
+
+```python
+leaky_relu = nx.LeakyReLU(negative_slope=0.1)
+x = nx.Tensor([[-1, 2], [3, -4]])
+output = leaky_relu(x)
+print(output)  # [[-0.1, 2], [3, -0.4]]
+```
+
+## ELU
+
+```python
+class ELU(Activation):
+    def __init__(self, alpha: float = 1.0, inplace: bool = False)
+```
+
+Exponential Linear Unit: `ELU(x) = max(0, x) + min(0, alpha * (exp(x) - 1))`
+
+### Parameters
+
+<ParamField path="alpha" type="float" default="1.0">
+  Controls the value to which an ELU saturates for negative inputs.
+</ParamField>
+
+<ParamField path="inplace" type="bool" default="False">
+  If True, does the operation in-place.
+</ParamField>
+
+### Example
+
+```python
+elu = nx.ELU(alpha=1.0)
+x = nx.Tensor([[-1, 0, 1, 2]])
+output = elu(x)
+```
+
+## SELU
+
+```python
+class SELU(Activation):
+    def __init__(self, inplace: bool = False)
+```
+
+Scaled Exponential Linear Unit. Self-normalizing activation function.
+
+`SELU(x) = scale * (max(0, x) + min(0, alpha * (exp(x) - 1)))`
+
+where `scale ≈ 1.0507` and `alpha ≈ 1.6733`.
+
+### Example
+
+```python
+selu = nx.SELU()
+x = nx.Tensor.randn((32, 128))
+output = selu(x)
+```
+
+## GELU
+
+```python
+class GELU(Activation):
+    def __init__(self, approximate: bool = False)
+```
+
+Gaussian Error Linear Unit. Used in BERT and GPT models.
+
+`GELU(x) = x * Φ(x)`
+
+where Φ(x) is the cumulative distribution function of the standard normal distribution.
+
+### Parameters
+
+<ParamField path="approximate" type="bool" default="False">
+  If True, use an approximation of the GELU function for faster computation.
+</ParamField>
+
+### Example
+
+```python
+gelu = nx.GELU()
+x = nx.Tensor.randn((32, 768))  # Transformer hidden states
+output = gelu(x)
+
+# Fast approximation
+gelu_approx = nx.GELU(approximate=True)
+output_approx = gelu_approx(x)
+```
+
+## Softmax
+
+```python
+class Softmax(Activation):
+    def __init__(self, dim: int = -1)
+```
+
+Softmax function: `Softmax(x_i) = exp(x_i) / sum_j(exp(x_j))`
+
+Converts logits to probabilities.
+
+### Parameters
+
+<ParamField path="dim" type="int" default="-1">
+  Dimension along which to apply softmax.
+</ParamField>
+
+### Example
+
+```python
+softmax = nx.Softmax(dim=1)
+logits = nx.Tensor([[1.0, 2.0, 3.0], [1.0, 1.0, 1.0]])
+probs = softmax(logits)
+print(probs)
+# [[0.09, 0.24, 0.67],
+#  [0.33, 0.33, 0.33]]
+
+# Each row sums to 1
+print(probs.sum(dim=1))  # [1.0, 1.0]
+```
+
+## LogSoftmax
+
+```python
+class LogSoftmax(Activation):
+    def __init__(self, dim: int = -1)
+```
+
+Log Softmax: `LogSoftmax(x_i) = log(exp(x_i) / sum_j(exp(x_j)))`
+
+More numerically stable than `log(softmax(x))`.
+
+### Example
+
+```python
+log_softmax = nx.LogSoftmax(dim=1)
+logits = nx.Tensor([[1.0, 2.0, 3.0]])
+log_probs = log_softmax(logits)
+print(log_probs)  # [[-2.41, -1.41, -0.41]]
+```
+
+## Using Activations in Models
+
+```python
+import neurenix as nx
+
+# Inline in Sequential
+model = nx.Sequential(
+    nx.Linear(784, 256),
+    nx.ReLU(),
+    nx.Dropout(0.5),
+    nx.Linear(256, 128),
+    nx.LeakyReLU(0.1),
+    nx.Linear(128, 10),
+    nx.Softmax(dim=1)
+)
+
+# In custom module
+class CustomNet(nx.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nx.Linear(100, 200)
+        self.fc2 = nx.Linear(200, 10)
+        self.gelu = nx.GELU()
+        self.softmax = nx.Softmax(dim=1)
+    
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.gelu(x)
+        x = self.fc2(x)
+        x = self.softmax(x)
+        return x
+
+# Using tensor methods directly
+x = nx.Tensor.randn((32, 100))
+y = x.relu()  # Equivalent to ReLU()(x)
+y = x.sigmoid()
+y = x.tanh()
+y = x.softmax(dim=1)
+```
+
+## Activation Function Comparison
+
+| Function | Range | Pros | Cons | Best For |
+|----------|-------|------|------|----------|
+| **ReLU** | [0, ∞) | Fast, no vanishing gradient | Dead neurons | General purpose, CNNs |
+| **LeakyReLU** | (-∞, ∞) | No dead neurons | Slightly slower | Deep networks |
+| **ELU** | (-α, ∞) | Smooth, self-normalizing | Slower (exponential) | Deep networks |
+| **SELU** | (-λα, ∞) | Self-normalizing | Requires specific initialization | Very deep networks |
+| **Sigmoid** | (0, 1) | Smooth, probabilistic | Vanishing gradient | Output layer (binary) |
+| **Tanh** | (-1, 1) | Zero-centered | Vanishing gradient | RNNs, hidden layers |
+| **Softmax** | (0, 1), sum=1 | Probabilistic distribution | - | Multi-class output |
+| **GELU** | (-0.17, ∞) | Smooth, modern | Slower | Transformers, NLP |
+
+## Tips
+
+<Tip>
+  **Default choice**: Use ReLU for most cases. It's fast and works well for CNNs.
+</Tip>
+
+<Tip>
+  **Dead ReLU problem**: If you have dead neurons (always outputting 0), try LeakyReLU or ELU.
+</Tip>
+
+<Tip>
+  **Transformers**: Use GELU for transformer-based models (BERT, GPT).
+</Tip>
+
+<Tip>
+  **Output layer**: Use Sigmoid for binary classification, Softmax for multi-class classification.
+</Tip>

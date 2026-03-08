@@ -1,0 +1,240 @@
+---
+title: neurenix run
+description: Run a model training script with specified configuration options
+---
+
+The `run` command executes a Neurenix model training script with the ability to override configuration parameters from the command line.
+
+## Usage
+
+```bash
+neurenix run [script] [options]
+```
+
+## Arguments
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `script` | string | `train.py` | Path to the Python training script to execute |
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--config` | string | `config.json` | Path to configuration file |
+| `--device` | string | None | Device to use (`cpu`, `cuda`, `auto`) |
+| `--batch-size` | integer | None | Batch size for training |
+| `--epochs` | integer | None | Number of training epochs |
+| `--learning-rate` | float | None | Learning rate for optimizer |
+
+## Configuration Override
+
+Command-line options override values in the configuration file:
+
+1. Configuration file is loaded from `--config` path
+2. Command-line options (if provided) override config values
+3. Updated configuration is written back to the file
+4. Script runs with the merged configuration
+
+The script can access the configuration path via the `NEURENIX_CONFIG` environment variable.
+
+## Examples
+
+### Run with default settings
+
+```bash
+neurenix run train.py
+```
+
+```
+Running train.py with configuration from config.json...
+Epoch 1/10: loss=0.523, accuracy=0.812
+Epoch 2/10: loss=0.412, accuracy=0.856
+...
+Script completed successfully.
+```
+
+### Run with custom script and config
+
+```bash
+neurenix run scripts/custom_train.py --config configs/experiment1.json
+```
+
+```
+Running scripts/custom_train.py with configuration from configs/experiment1.json...
+Script completed successfully.
+```
+
+### Override training parameters
+
+```bash
+neurenix run train.py --epochs 50 --batch-size 64 --learning-rate 0.0001
+```
+
+```
+Running train.py with configuration from config.json...
+Epoch 1/50: loss=0.628, accuracy=0.743
+...
+Script completed successfully.
+```
+
+### Force CPU training
+
+```bash
+neurenix run train.py --device cpu
+```
+
+```
+Running train.py with configuration from config.json...
+Using device: cpu
+Epoch 1/10: loss=0.523, accuracy=0.812
+...
+Script completed successfully.
+```
+
+### Use GPU with auto-detection
+
+```bash
+neurenix run train.py --device auto
+```
+
+```
+Running train.py with configuration from config.json...
+Using device: cuda:0
+Epoch 1/10: loss=0.523, accuracy=0.812
+...
+Script completed successfully.
+```
+
+### Combine multiple overrides
+
+```bash
+neurenix run train.py \
+  --config configs/resnet.json \
+  --device cuda \
+  --batch-size 128 \
+  --epochs 100 \
+  --learning-rate 0.001
+```
+
+## Configuration File
+
+The configuration file is typically a JSON file with the following structure:
+
+```json
+{
+  "model": {
+    "type": "mlp",
+    "layers": [128, 64, 10],
+    "activation": "relu"
+  },
+  "training": {
+    "batch_size": 32,
+    "epochs": 10,
+    "learning_rate": 0.001,
+    "optimizer": "adam"
+  },
+  "hardware": {
+    "device": "auto",
+    "precision": "float32"
+  }
+}
+```
+
+## Environment Variables
+
+The `run` command sets the following environment variable for the training script:
+
+- `NEURENIX_CONFIG`: Absolute path to the configuration file
+
+Your training script can access this:
+
+```python
+import os
+import neurenix
+
+config_path = os.environ.get('NEURENIX_CONFIG')
+config = neurenix.load_config(config_path)
+```
+
+## Error Handling
+
+### Script not found
+
+```bash
+neurenix run nonexistent.py
+```
+
+```
+Error: Script 'nonexistent.py' not found.
+```
+
+### Configuration file not found
+
+```bash
+neurenix run train.py --config missing.json
+```
+
+```
+Error: Configuration file 'missing.json' not found.
+```
+
+### Script execution error
+
+```bash
+neurenix run train.py
+```
+
+```
+Running train.py with configuration from config.json...
+Traceback (most recent call last):
+  File "train.py", line 10, in <module>
+    raise ValueError("Invalid configuration")
+Error: Script exited with code 1
+```
+
+## Best Practices
+
+### 1. Use configuration files for experiments
+
+Create separate config files for different experiments:
+
+```bash
+neurenix run train.py --config configs/baseline.json
+neurenix run train.py --config configs/with_augmentation.json
+neurenix run train.py --config configs/large_model.json
+```
+
+### 2. Override for quick iterations
+
+Use command-line overrides for quick parameter sweeps:
+
+```bash
+for lr in 0.001 0.0001 0.00001; do
+  neurenix run train.py --learning-rate $lr
+done
+```
+
+### 3. Version control your configs
+
+Keep configuration files in version control to track experiments:
+
+```bash
+git add configs/experiment_v1.json
+git commit -m "Add experiment v1 configuration"
+```
+
+### 4. Use descriptive script names
+
+```bash
+neurenix run scripts/train_resnet50.py
+neurenix run scripts/finetune_bert.py
+neurenix run scripts/train_gan.py
+```
+
+## See Also
+
+- [Init command](/cli/init) - Initialize projects
+- [Monitor command](/cli/monitor) - Monitor training
+- [Eval command](/cli/eval) - Evaluate models
+- [Save command](/cli/save) - Save model state

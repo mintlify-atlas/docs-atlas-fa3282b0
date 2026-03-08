@@ -1,0 +1,596 @@
+---
+title: Kubernetes Deployment
+description: Deploy and scale Neurenix models on Kubernetes clusters
+---
+
+## Overview
+
+Neurenix provides native Kubernetes integration for deploying, scaling, and managing ML models in production. The framework includes support for:
+
+- **Deployments**: Scalable model serving with rolling updates
+- **Pods**: Individual container instances
+- **Services**: Load balancing and service discovery
+- **ConfigMaps & Secrets**: Configuration and credential management
+- **Jobs**: Batch inference and training
+
+## Prerequisites
+
+- Kubernetes cluster (1.19+)
+- kubectl configured
+- Docker images built and pushed to a registry
+
+```bash
+# Verify kubectl
+kubectl version --client
+```
+
+## Quick Start
+
+### Deploy a Model
+
+```python
+from neurenix.kubernetes import Deployment, DeploymentConfig
+
+# Create deployment configuration
+config = DeploymentConfig(
+    name="neurenix-model",
+    image="myregistry.com/neurenix-model:latest",
+    replicas=3,
+    namespace="default",
+    ports=[{"containerPort": 8000, "protocol": "TCP"}],
+    env={
+        "MODEL_PATH": "/app/model.nx",
+        "DEVICE": "cpu"
+    },
+    resources={
+        "requests": {"cpu": "500m", "memory": "1Gi"},
+        "limits": {"cpu": "2", "memory": "4Gi"}
+    }
+)
+
+# Create and deploy
+deployment = Deployment(name="neurenix-model", namespace="default")
+deployment.create(config)
+
+print("Deployment created successfully")
+```
+
+### Expose via Service
+
+```python
+from neurenix.kubernetes import Service, ServiceConfig
+
+service_config = ServiceConfig(
+    name="neurenix-model-service",
+    namespace="default",
+    selector={"app": "neurenix-model"},
+    ports=[{"port": 80, "targetPort": 8000, "protocol": "TCP"}],
+    type="LoadBalancer"
+)
+
+service = Service(name="neurenix-model-service", namespace="default")
+service.create(service_config)
+
+print("Service created successfully")
+```
+
+## Deployments
+
+### DeploymentConfig
+
+Comprehensive deployment configuration:
+
+```python
+from neurenix.kubernetes import DeploymentConfig
+
+config = DeploymentConfig(
+    name="ml-inference",
+    image="neurenix-model:v1.0",
+    replicas=5,
+    namespace="production",
+    labels={
+        "app": "ml-inference",
+        "version": "v1.0",
+        "component": "model-serving"
+    },
+    annotations={
+        "prometheus.io/scrape": "true",
+        "prometheus.io/port": "8000"
+    },
+    env={
+        "MODEL_PATH": "/models/model.nx",
+        "LOG_LEVEL": "info",
+        "WORKERS": "4"
+    },
+    ports=[{"containerPort": 8000, "name": "http"}],
+    resources={
+        "requests": {
+            "cpu": "1",
+            "memory": "2Gi"
+        },
+        "limits": {
+            "cpu": "4",
+            "memory": "8Gi"
+        }
+    },
+    liveness_probe={
+        "httpGet": {
+            "path": "/health",
+            "port": 8000
+        },
+        "initialDelaySeconds": 30,
+        "periodSeconds": 10
+    },
+    readiness_probe={
+        "httpGet": {
+            "path": "/ready",
+            "port": 8000
+        },
+        "initialDelaySeconds": 10,
+        "periodSeconds": 5
+    },
+    strategy={
+        "type": "RollingUpdate",
+        "rollingUpdate": {
+            "maxSurge": 1,
+            "maxUnavailable": 0
+        }
+    }
+)
+```
+
+### Deployment Operations
+
+```python
+from neurenix.kubernetes import Deployment
+
+deployment = Deployment(name="ml-inference", namespace="production")
+
+# Create deployment
+deployment.create(config)
+
+# Check if exists
+if deployment.exists():
+    print("Deployment is running")
+
+# Get deployment info
+info = deployment.get()
+print(f"Replicas: {info['spec']['replicas']}")
+
+# Scale deployment
+deployment.scale(replicas=10)
+
+# Restart deployment (rolling restart)
+deployment.restart()
+
+# Get deployment status
+status = deployment.status()
+print(f"Available replicas: {status.get('availableReplicas', 0)}")
+
+# View logs
+logs = deployment.logs(tail=100)
+print(logs)
+
+# Execute command in deployment
+output = deployment.exec(["curl", "http://localhost:8000/health"])
+print(output)
+
+# Update image
+deployment.update_image("neurenix-model:v2.0")
+
+# Delete deployment
+deployment.delete(wait=True)
+```
+
+### Neurenix-Specific Deployment
+
+Simplified deployment creation:
+
+```python
+deployment = Deployment(name="neurenix-prod", namespace="ml-models")
+
+deployment.create_neurenix_deployment(
+    image="neurenix-model:latest",
+    model_path="/models/classifier.nx",
+    replicas=3,
+    gpu=False,
+    memory="4Gi",
+    cpu="2",
+    port=8000,
+    env={
+        "BATCH_SIZE": "32",
+        "TIMEOUT": "30"
+    }
+)
+```
+
+### GPU Deployments
+
+```python
+config = DeploymentConfig(
+    name="gpu-inference",
+    image="neurenix-model:cuda",
+    replicas=2,
+    namespace="gpu-workloads",
+    resources={
+        "requests": {
+            "cpu": "4",
+            "memory": "16Gi",
+            "nvidia.com/gpu": "1"
+        },
+        "limits": {
+            "cpu": "8",
+            "memory": "32Gi",
+            "nvidia.com/gpu": "1"
+        }
+    },
+    node_selector={
+        "accelerator": "nvidia-tesla-v100"
+    },
+    tolerations=[
+        {
+            "key": "nvidia.com/gpu",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+        }
+    ]
+)
+```
+
+## Pods
+
+### PodConfig
+
+```python
+from neurenix.kubernetes import PodConfig
+
+config = PodConfig(
+    name="inference-pod",
+    image="neurenix-model:latest",
+    namespace="default",
+    labels={"app": "inference"},
+    env={"MODEL_PATH": "/app/model.nx"},
+    ports=[{"containerPort": 8000}],
+    resources={
+        "requests": {"cpu": "1", "memory": "2Gi"},
+        "limits": {"cpu": "2", "memory": "4Gi"}
+    },
+    restart_policy="Always",
+    volumes=[
+        {
+            "name": "model-storage",
+            "persistentVolumeClaim": {"claimName": "model-pvc"}
+        }
+    ],
+    volume_mounts=[
+        {"name": "model-storage", "mountPath": "/app/models"}
+    ]
+)
+```
+
+### Pod Operations
+
+```python
+from neurenix.kubernetes import Pod
+
+pod = Pod(name="inference-pod", namespace="default")
+
+# Create pod
+pod.create(config)
+
+# Check status
+status = pod.status()
+print(f"Pod status: {status}")
+
+# Get pod info
+info = pod.get()
+print(f"IP: {info['status']['podIP']}")
+
+# View logs
+logs = pod.logs(tail=50)
+print(logs)
+
+# Follow logs
+logs = pod.logs(follow=True)
+
+# Execute command
+output = pod.exec(["ls", "-la", "/app"])
+print(output)
+
+# Port forwarding
+port_forward_process = pod.port_forward(local_port=8080, remote_port=8000)
+print("Access at http://localhost:8080")
+# ... use the service ...
+port_forward_process.terminate()
+
+# Copy files
+pod.copy_to("./model.nx", "/app/model.nx")
+pod.copy_from("/app/output.json", "./output.json")
+
+# Delete pod
+pod.delete(force=True)
+```
+
+### Create Neurenix Pod
+
+```python
+pod = Pod(name="neurenix-worker", namespace="ml-jobs")
+
+pod.create_neurenix_pod(
+    image="neurenix-model:latest",
+    model_path="/models/model.nx",
+    gpu=True,
+    memory="8Gi",
+    cpu="4",
+    port=8000,
+    env={"DEVICE": "cuda"},
+    command=["python"],
+    args=["inference.py"]
+)
+```
+
+## Services
+
+### ServiceConfig
+
+```python
+from neurenix.kubernetes import ServiceConfig
+
+# ClusterIP (internal)
+cluster_config = ServiceConfig(
+    name="internal-service",
+    namespace="default",
+    selector={"app": "neurenix-model"},
+    ports=[{"port": 80, "targetPort": 8000}],
+    type="ClusterIP"
+)
+
+# NodePort (external access via node IP)
+node_config = ServiceConfig(
+    name="nodeport-service",
+    namespace="default",
+    selector={"app": "neurenix-model"},
+    ports=[{
+        "port": 80,
+        "targetPort": 8000,
+        "nodePort": 30080
+    }],
+    type="NodePort"
+)
+
+# LoadBalancer (cloud provider LB)
+lb_config = ServiceConfig(
+    name="lb-service",
+    namespace="default",
+    selector={"app": "neurenix-model"},
+    ports=[{"port": 80, "targetPort": 8000}],
+    type="LoadBalancer",
+    external_traffic_policy="Local"
+)
+```
+
+### Service Operations
+
+```python
+from neurenix.kubernetes import Service
+
+service = Service(name="neurenix-service", namespace="default")
+
+# Create service
+service.create(lb_config)
+
+# Check if exists
+if service.exists():
+    print("Service is running")
+
+# Get service info
+info = service.get()
+print(f"Type: {info['spec']['type']}")
+
+# Get external IP (LoadBalancer)
+external_ip = service.get_external_ip()
+if external_ip:
+    print(f"Access at http://{external_ip}")
+
+# Get cluster IP
+cluster_ip = service.get_cluster_ip()
+print(f"Internal IP: {cluster_ip}")
+
+# Get node port
+node_port = service.get_node_port(port=80)
+if node_port:
+    print(f"NodePort: {node_port}")
+
+# Get endpoints
+endpoints = service.get_endpoints()
+print(f"Endpoints: {endpoints}")
+
+# Port forward
+port_forward = service.port_forward(local_port=8080, remote_port=80)
+print("Forwarded to localhost:8080")
+
+# Delete service
+service.delete()
+```
+
+### Create Neurenix Service
+
+```python
+service = Service(name="neurenix-api", namespace="production")
+
+service.create_neurenix_service(
+    port=80,
+    target_port=8000,
+    type="LoadBalancer",
+    selector={"app": "neurenix-model", "version": "v1"},
+    external_traffic_policy="Local"
+)
+```
+
+## Complete Production Deployment
+
+```python
+from neurenix.kubernetes import (
+    Deployment, DeploymentConfig,
+    Service, ServiceConfig,
+    ConfigMap, Secret
+)
+
+# 1. Create ConfigMap for configuration
+config_map = ConfigMap(
+    name="model-config",
+    namespace="production",
+    data={
+        "model.conf": "batch_size=32\ntimeout=30",
+        "logging.conf": "level=info\nformat=json"
+    }
+)
+
+# 2. Create Secret for credentials
+secret = Secret(
+    name="model-secrets",
+    namespace="production",
+    data={
+        "api-key": "base64-encoded-key",
+        "db-password": "base64-encoded-password"
+    }
+)
+
+# 3. Create Deployment
+deployment_config = DeploymentConfig(
+    name="neurenix-production",
+    image="myregistry.com/neurenix-model:v2.0",
+    replicas=5,
+    namespace="production",
+    labels={
+        "app": "neurenix",
+        "version": "v2.0",
+        "tier": "api"
+    },
+    env={
+        "MODEL_PATH": "/models/model.nx",
+        "CONFIG_PATH": "/etc/config"
+    },
+    env_from=[
+        {"configMapRef": {"name": "model-config"}},
+        {"secretRef": {"name": "model-secrets"}}
+    ],
+    ports=[{"containerPort": 8000, "name": "http"}],
+    resources={
+        "requests": {"cpu": "2", "memory": "4Gi"},
+        "limits": {"cpu": "4", "memory": "8Gi"}
+    },
+    liveness_probe={
+        "httpGet": {"path": "/health", "port": 8000},
+        "initialDelaySeconds": 30,
+        "periodSeconds": 10,
+        "timeoutSeconds": 5,
+        "failureThreshold": 3
+    },
+    readiness_probe={
+        "httpGet": {"path": "/ready", "port": 8000},
+        "initialDelaySeconds": 10,
+        "periodSeconds": 5
+    },
+    strategy={
+        "type": "RollingUpdate",
+        "rollingUpdate": {
+            "maxSurge": 1,
+            "maxUnavailable": 0
+        }
+    }
+)
+
+deployment = Deployment(name="neurenix-production", namespace="production")
+deployment.create(deployment_config)
+
+# 4. Create Service
+service_config = ServiceConfig(
+    name="neurenix-api",
+    namespace="production",
+    selector={"app": "neurenix"},
+    ports=[{"port": 80, "targetPort": 8000}],
+    type="LoadBalancer",
+    annotations={
+        "service.beta.kubernetes.io/aws-load-balancer-type": "nlb"
+    }
+)
+
+service = Service(name="neurenix-api", namespace="production")
+service.create(service_config)
+
+print("Production deployment complete!")
+print(f"External IP: {service.get_external_ip()}")
+```
+
+## YAML Export
+
+Export configurations to YAML files:
+
+```python
+# Export deployment YAML
+yaml_content = deployment_config.to_yaml()
+with open("deployment.yaml", "w") as f:
+    f.write(yaml_content)
+
+# Export service YAML
+service_yaml = service_config.to_yaml()
+with open("service.yaml", "w") as f:
+    f.write(service_yaml)
+
+# Apply with kubectl
+import subprocess
+subprocess.run(["kubectl", "apply", "-f", "deployment.yaml"])
+subprocess.run(["kubectl", "apply", "-f", "service.yaml"])
+```
+
+## Best Practices
+
+1. **Resource Limits**: Always set CPU and memory limits to prevent resource exhaustion
+2. **Health Checks**: Implement liveness and readiness probes for reliability
+3. **Rolling Updates**: Use rolling updates with maxUnavailable=0 for zero-downtime deployments
+4. **Horizontal Pod Autoscaling**: Configure HPA for automatic scaling based on metrics
+5. **Pod Disruption Budgets**: Protect availability during cluster maintenance
+6. **Namespaces**: Use separate namespaces for different environments
+7. **Labels and Selectors**: Use consistent labeling for service discovery and monitoring
+8. **Secrets Management**: Use Kubernetes secrets or external secret managers
+9. **Monitoring**: Integrate with Prometheus and Grafana for observability
+10. **Logging**: Use structured logging with centralized log aggregation
+
+## Troubleshooting
+
+### Check kubectl Installation
+
+```python
+try:
+    deployment = Deployment("test", "default")
+except RuntimeError as e:
+    print(f"kubectl error: {e}")
+    # Install kubectl or configure kubeconfig
+```
+
+### Debug Deployment Issues
+
+```python
+# Check deployment status
+status = deployment.status()
+print(f"Desired replicas: {status.get('replicas')}")
+print(f"Available replicas: {status.get('availableReplicas')}")
+
+# View logs
+logs = deployment.logs(tail=100)
+print(logs)
+
+# Describe deployment (using kubectl)
+import subprocess
+subprocess.run(["kubectl", "describe", "deployment", "neurenix-model"])
+
+# Check events
+subprocess.run(["kubectl", "get", "events", "--sort-by=.metadata.creationTimestamp"])
+```
+
+## Next Steps
+
+- [Docker Containerization](/deployment/docker)
+- [API Serving](/deployment/api-serving)
+- [Monitor with Prometheus and Grafana](https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/)

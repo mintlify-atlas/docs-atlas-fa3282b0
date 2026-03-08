@@ -1,0 +1,419 @@
+---
+title: Fuzzy Logic Systems
+description: Fuzzy logic inference systems for handling uncertainty and vagueness
+---
+
+# Fuzzy Logic Systems
+
+The fuzzy logic module provides implementations of fuzzy sets, membership functions, and fuzzy inference systems for reasoning under uncertainty. Fuzzy logic extends classical Boolean logic to handle partial truth values between 0 and 1.
+
+## Overview
+
+Fuzzy logic is particularly useful for:
+- Control systems with uncertain or imprecise inputs
+- Decision-making under vagueness
+- Rule-based expert systems
+- Combining neural networks with symbolic reasoning
+
+## Fuzzy Sets
+
+Fuzzy sets define membership functions that map input values to degrees of membership in [0, 1].
+
+### Triangular Fuzzy Set
+
+```python
+from neurenix.fuzzy import TriangularSet
+import neurenix as nx
+
+# Define a triangular fuzzy set
+fuzzy_set = TriangularSet(a=0.0, b=5.0, c=10.0)
+
+# Evaluate membership
+x = nx.linspace(0, 10, 100)
+membership = fuzzy_set(x)
+```
+
+**Parameters:**
+- `a` (float): Left foot of triangle
+- `b` (float): Peak of triangle
+- `c` (float): Right foot of triangle
+
+### Trapezoidal Fuzzy Set
+
+```python
+from neurenix.fuzzy import TrapezoidalSet
+
+fuzzy_set = TrapezoidalSet(a=0.0, b=3.0, c=7.0, d=10.0)
+membership = fuzzy_set(x)
+```
+
+### Gaussian Fuzzy Set
+
+```python
+from neurenix.fuzzy import GaussianSet
+
+fuzzy_set = GaussianSet(mean=5.0, std=2.0)
+membership = fuzzy_set(x)
+```
+
+### Bell-Shaped Fuzzy Set
+
+```python
+from neurenix.fuzzy import BellSet
+
+fuzzy_set = BellSet(a=2.0, b=4.0, c=5.0)
+membership = fuzzy_set(x)
+```
+
+### Sigmoid Fuzzy Set
+
+```python
+from neurenix.fuzzy import SigmoidSet
+
+fuzzy_set = SigmoidSet(a=1.0, c=5.0)
+membership = fuzzy_set(x)
+```
+
+## Linguistic Variables
+
+Linguistic variables represent fuzzy concepts with natural language terms.
+
+```python
+from neurenix.fuzzy import LinguisticVariable, TriangularSet
+import neurenix as nx
+
+# Define temperature variable
+temperature = LinguisticVariable(
+    name="temperature",
+    universe=nx.linspace(0, 100, 1000)
+)
+
+# Add fuzzy sets for linguistic terms
+temperature.add_set("cold", TriangularSet(0, 0, 30))
+temperature.add_set("warm", TriangularSet(20, 40, 60))
+temperature.add_set("hot", TriangularSet(50, 100, 100))
+
+# Fuzzify a crisp value
+fuzzy_values = temperature.fuzzify(25.0)
+print(fuzzy_values)  # {'cold': 0.17, 'warm': 0.25, 'hot': 0.0}
+```
+
+## Fuzzy Rules
+
+Define IF-THEN rules for fuzzy inference.
+
+```python
+from neurenix.fuzzy import FuzzyRule, FuzzyRuleSet
+
+# Create rules
+rule1 = FuzzyRule(
+    antecedents=[("temperature", "cold")],
+    consequent=("heater", "high")
+)
+
+rule2 = FuzzyRule(
+    antecedents=[("temperature", "warm")],
+    consequent=("heater", "medium")
+)
+
+rule3 = FuzzyRule(
+    antecedents=[("temperature", "hot")],
+    consequent=("heater", "off")
+)
+
+# Create rule set
+rule_set = FuzzyRuleSet()
+rule_set.add_rule(rule1)
+rule_set.add_rule(rule2)
+rule_set.add_rule(rule3)
+```
+
+## Fuzzy Inference Systems
+
+### Mamdani Inference System
+
+The most common fuzzy inference method, using fuzzy sets for both inputs and outputs.
+
+```python
+from neurenix.fuzzy import MamdaniSystem, LinguisticVariable, TriangularSet
+import neurenix as nx
+
+# Create Mamdani system
+fis = MamdaniSystem(
+    name="Temperature Control",
+    defuzzification_method="centroid"
+)
+
+# Define input variable
+temperature = LinguisticVariable(
+    name="temperature",
+    universe=nx.linspace(0, 100, 1000)
+)
+temperature.add_set("cold", TriangularSet(0, 0, 30))
+temperature.add_set("warm", TriangularSet(20, 50, 80))
+temperature.add_set("hot", TriangularSet(70, 100, 100))
+
+fis.add_input_variable(temperature)
+
+# Define output variable
+heater = LinguisticVariable(
+    name="heater",
+    universe=nx.linspace(0, 100, 1000)
+)
+heater.add_set("off", TriangularSet(0, 0, 20))
+heater.add_set("medium", TriangularSet(30, 50, 70))
+heater.add_set("high", TriangularSet(80, 100, 100))
+
+fis.add_output_variable(heater)
+
+# Add rules
+from neurenix.fuzzy import FuzzyRule
+
+fis.add_rule(FuzzyRule(
+    antecedents=[("temperature", "cold")],
+    consequent=("heater", "high")
+))
+
+fis.add_rule(FuzzyRule(
+    antecedents=[("temperature", "warm")],
+    consequent=("heater", "medium")
+))
+
+fis.add_rule(FuzzyRule(
+    antecedents=[("temperature", "hot")],
+    consequent=("heater", "off")
+))
+
+# Evaluate
+inputs = {"temperature": 25.0}
+outputs = fis.evaluate(inputs)
+print(f"Heater setting: {outputs['heater']:.2f}%")
+```
+
+### Sugeno Inference System
+
+Uses crisp output functions instead of fuzzy sets.
+
+```python
+from neurenix.fuzzy import SugenoSystem
+
+# Create Sugeno system
+fis = SugenoSystem(name="Tip Calculator")
+
+# Add input variables
+fis.add_input_variable(service)  # Defined as above
+fis.add_input_variable(food)     # Defined as above
+
+# Add output variable
+tip = LinguisticVariable(name="tip", universe=nx.linspace(0, 30, 1000))
+fis.add_output_variable(tip)
+
+# Define output functions (crisp values or linear functions)
+def low_tip(inputs):
+    return 5.0
+
+def medium_tip(inputs):
+    return 15.0
+
+def high_tip(inputs):
+    return 0.2 * inputs["service"] + 0.1 * inputs["food"]
+
+fis.add_output_function("tip", "low", low_tip)
+fis.add_output_function("tip", "medium", medium_tip)
+fis.add_output_function("tip", "high", high_tip)
+
+# Add rules and evaluate
+fis.add_rule(FuzzyRule(
+    antecedents=[("service", "poor"), ("food", "poor")],
+    consequent=("tip", "low")
+))
+
+outputs = fis.evaluate({"service": 3, "food": 8})
+```
+
+### Tsukamoto Inference System
+
+Uses monotonic membership functions.
+
+```python
+from neurenix.fuzzy import TsukamotoSystem
+
+fis = TsukamotoSystem(name="Speed Control")
+
+# Define variables with monotonic membership functions
+# Add rules and evaluate
+outputs = fis.evaluate(inputs)
+```
+
+## Defuzzification Methods
+
+Convert fuzzy outputs back to crisp values.
+
+```python
+from neurenix.fuzzy import (
+    centroid,
+    bisector,
+    mean_of_maximum,
+    smallest_of_maximum,
+    largest_of_maximum
+)
+import neurenix as nx
+
+# Sample fuzzy output
+universe = nx.linspace(0, 100, 1000)
+membership = fuzzy_set(universe)
+
+# Centroid (center of area)
+value = centroid(universe, membership)
+
+# Bisector (divides area in half)
+value = bisector(universe, membership)
+
+# Mean of maximum (average of max membership)
+value = mean_of_maximum(universe, membership)
+```
+
+## Example: Fuzzy Controller
+
+```python
+import neurenix as nx
+from neurenix.fuzzy import (
+    MamdaniSystem,
+    LinguisticVariable,
+    TriangularSet,
+    FuzzyRule
+)
+
+# Create fuzzy controller for inverted pendulum
+fis = MamdaniSystem(name="Pendulum Controller")
+
+# Define angle input
+angle = LinguisticVariable("angle", nx.linspace(-90, 90, 1000))
+angle.add_set("left", TriangularSet(-90, -90, 0))
+angle.add_set("center", TriangularSet(-30, 0, 30))
+angle.add_set("right", TriangularSet(0, 90, 90))
+fis.add_input_variable(angle)
+
+# Define angular velocity input
+velocity = LinguisticVariable("velocity", nx.linspace(-100, 100, 1000))
+velocity.add_set("negative", TriangularSet(-100, -100, 0))
+velocity.add_set("zero", TriangularSet(-20, 0, 20))
+velocity.add_set("positive", TriangularSet(0, 100, 100))
+fis.add_input_variable(velocity)
+
+# Define force output
+force = LinguisticVariable("force", nx.linspace(-10, 10, 1000))
+force.add_set("left_push", TriangularSet(-10, -10, 0))
+force.add_set("no_push", TriangularSet(-2, 0, 2))
+force.add_set("right_push", TriangularSet(0, 10, 10))
+fis.add_output_variable(force)
+
+# Define control rules
+rules = [
+    FuzzyRule([("angle", "left"), ("velocity", "negative")], ("force", "right_push")),
+    FuzzyRule([("angle", "left"), ("velocity", "zero")], ("force", "right_push")),
+    FuzzyRule([("angle", "center"), ("velocity", "zero")], ("force", "no_push")),
+    FuzzyRule([("angle", "right"), ("velocity", "positive")], ("force", "left_push")),
+]
+
+for rule in rules:
+    fis.add_rule(rule)
+
+# Control loop
+for t in range(1000):
+    current_angle = get_angle()
+    current_velocity = get_velocity()
+    
+    output = fis.evaluate({
+        "angle": current_angle,
+        "velocity": current_velocity
+    })
+    
+    apply_force(output["force"])
+```
+
+## Example: Decision Making
+
+```python
+from neurenix.fuzzy import MamdaniSystem, LinguisticVariable, TrapezoidalSet
+
+# Investment decision system
+fis = MamdaniSystem(name="Investment Advisor")
+
+# Risk tolerance
+risk = LinguisticVariable("risk", nx.linspace(0, 10, 1000))
+risk.add_set("low", TrapezoidalSet(0, 0, 2, 4))
+risk.add_set("medium", TrapezoidalSet(3, 5, 5, 7))
+risk.add_set("high", TrapezoidalSet(6, 8, 10, 10))
+fis.add_input_variable(risk)
+
+# Market condition
+market = LinguisticVariable("market", nx.linspace(0, 10, 1000))
+market.add_set("bear", TrapezoidalSet(0, 0, 3, 5))
+market.add_set("neutral", TrapezoidalSet(4, 5, 5, 6))
+market.add_set("bull", TrapezoidalSet(5, 7, 10, 10))
+fis.add_input_variable(market)
+
+# Investment allocation
+allocation = LinguisticVariable("allocation", nx.linspace(0, 100, 1000))
+allocation.add_set("conservative", TrapezoidalSet(0, 0, 20, 40))
+allocation.add_set("balanced", TrapezoidalSet(30, 50, 50, 70))
+allocation.add_set("aggressive", TrapezoidalSet(60, 80, 100, 100))
+fis.add_output_variable(allocation)
+
+# Rules
+fis.add_rule(FuzzyRule([("risk", "low"), ("market", "bear")], ("allocation", "conservative")))
+fis.add_rule(FuzzyRule([("risk", "high"), ("market", "bull")], ("allocation", "aggressive")))
+# ... more rules
+
+# Get recommendation
+result = fis.evaluate({"risk": 7.0, "market": 8.0})
+print(f"Recommended allocation: {result['allocation']:.1f}% stocks")
+```
+
+## Integration with Neural Networks
+
+```python
+import neurenix as nx
+from neurenix.fuzzy import MamdaniSystem
+from neurenix.nn import Module
+
+class NeuroFuzzySystem(Module):
+    def __init__(self, fis: MamdaniSystem):
+        super().__init__()
+        self.fis = fis
+        self.neural_preprocessor = nx.nn.Sequential(
+            nx.nn.Linear(10, 32),
+            nx.nn.ReLU(),
+            nx.nn.Linear(32, 2)  # Outputs for fuzzy system
+        )
+    
+    def forward(self, x):
+        # Neural preprocessing
+        features = self.neural_preprocessor(x)
+        
+        # Fuzzy inference
+        outputs = []
+        for sample in features:
+            result = self.fis.evaluate({
+                "input1": sample[0].item(),
+                "input2": sample[1].item()
+            })
+            outputs.append(result["output"])
+        
+        return nx.tensor(outputs)
+```
+
+## Best Practices
+
+1. **Membership Functions**: Choose appropriate shapes (triangular for simplicity, Gaussian for smoothness)
+2. **Universe of Discourse**: Define sufficient resolution for accurate calculations
+3. **Rule Coverage**: Ensure rules cover all important input combinations
+4. **Defuzzification**: Use centroid for balanced results, mean-of-maximum for responsive control
+5. **Validation**: Test with known inputs to verify expected behavior
+
+## See Also
+
+- [Neuro-Symbolic Integration](/modules/neuro-symbolic)
+- [Expert Systems](/guides/expert-systems)
+- [Control Systems](/examples/control)

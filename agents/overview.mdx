@@ -1,0 +1,177 @@
+---
+title: Agents Overview
+description: Learn about the agent-based AI system in Neurenix for building intelligent agents and multi-agent systems
+---
+
+# Agents Overview
+
+Neurenix provides a powerful agent-based AI system that enables you to build intelligent agents, multi-agent systems, and custom environments. The agent module is designed for reinforcement learning, autonomous agents, and complex multi-agent interactions.
+
+## Core Components
+
+The Neurenix agent system consists of three main components:
+
+### Agent
+
+The `Agent` class is the base class for all AI agents in Neurenix. It provides a foundation for implementing various types of agents, such as:
+
+- Reinforcement learning agents
+- Autonomous agents
+- Goal-driven agents
+- Custom intelligent agents
+
+**Key Features:**
+- Act based on observations
+- Learn from experience
+- Save and load agent state
+- Reset functionality for episodes
+
+### Environment
+
+The `Environment` class defines the world in which agents operate. It:
+
+- Provides observations to agents
+- Processes agent actions
+- Manages environment state
+- Supports agent registration
+
+### MultiAgent
+
+The `MultiAgent` class coordinates multiple agents in a shared environment, enabling:
+
+- Multi-agent interactions
+- Shared environment coordination
+- Step-based simulation
+- Agent management (add/remove)
+
+## Quick Start
+
+```python
+from neurenix.agent import Agent, Environment, MultiAgent
+
+# Create a custom agent
+class MyAgent(Agent):
+    def act(self, observation):
+        # Implement action selection logic
+        return action
+    
+    def learn(self, experience):
+        # Implement learning logic
+        pass
+
+# Create a custom environment
+class MyEnvironment(Environment):
+    def step(self, actions):
+        # Process actions and return results
+        return {
+            "rewards": rewards,
+            "done": done,
+            "info": info
+        }
+    
+    def observe(self, agent):
+        # Return observation for agent
+        return observation
+
+# Create and use agents
+agent = MyAgent(name="agent-1")
+env = MyEnvironment()
+
+# Get observation and act
+observation = env.observe(agent)
+action = agent.act(observation)
+```
+
+## Architecture
+
+The agent system follows a clean, modular architecture:
+
+```
+Agent → act(observation) → Action
+  ↓
+learn(experience)
+  ↓
+Updated Agent
+
+Environment → step(actions) → Results (rewards, done, info)
+            → observe(agent) → Observation
+
+MultiAgent → coordinates → Multiple Agents + Environment
+```
+
+## Common Use Cases
+
+### Reinforcement Learning
+
+Build RL agents that learn from rewards:
+
+```python
+class RLAgent(Agent):
+    def __init__(self, name=None):
+        super().__init__(name)
+        self.policy = None  # Your policy network
+        self.value = None   # Your value network
+    
+    def act(self, observation):
+        # Use policy to select action
+        return self.policy.forward(observation)
+    
+    def learn(self, experience):
+        # Update policy based on experience
+        state, action, reward, next_state = experience
+        # Your learning algorithm (PPO, DQN, etc.)
+```
+
+### Multi-Agent Systems
+
+Coordinate multiple agents in a shared environment:
+
+```python
+agents = [MyAgent(f"agent-{i}") for i in range(5)]
+env = MyEnvironment()
+mas = MultiAgent(agents, env)
+
+# Run simulation
+observations = mas.reset()
+for step in range(1000):
+    results = mas.step()
+    if results["done"]:
+        break
+```
+
+### Autonomous Agents
+
+Create goal-driven autonomous agents:
+
+```python
+class AutonomousAgent(Agent):
+    def __init__(self, goal, name=None):
+        super().__init__(name)
+        self.goal = goal
+    
+    def act(self, observation):
+        # Plan actions based on goal
+        return self.plan_action(observation, self.goal)
+```
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Single Agent" icon="user" href="/agents/single-agent">
+    Learn how to create and customize individual agents
+  </Card>
+  <Card title="Multi-Agent" icon="users" href="/agents/multi-agent">
+    Build multi-agent systems and coordinate agents
+  </Card>
+  <Card title="Environments" icon="globe" href="/agents/environments">
+    Create custom environments for your agents
+  </Card>
+</CardGroup>
+
+## Import Reference
+
+```python
+from neurenix.agent import Agent, Environment, MultiAgent
+```
+
+All agent components are available from the `neurenix.agent` module.

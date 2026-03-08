@@ -1,0 +1,606 @@
+---
+title: Neural Networks
+description: Building and training neural networks with Neurenix's modular architecture
+---
+
+## Overview
+
+Neurenix provides a comprehensive neural network API based on the `Module` class, similar to PyTorch's `nn.Module`. Build complex architectures by composing layers, activation functions, and custom modules.
+
+```python
+from neurenix.nn import Module, Linear, ReLU, Sequential
+from neurenix.tensor import Tensor
+
+class SimpleNet(Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = Linear(784, 256)
+        self.relu = ReLU()
+        self.fc2 = Linear(256, 10)
+    
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
+
+# Create and use the model
+model = SimpleNet()
+output = model(Tensor.randn((32, 784)))
+```
+
+## Module Base Class
+
+All neural network components inherit from `Module`, which provides parameter management, training/evaluation modes, and device placement.
+
+### Creating Custom Modules
+
+```python
+from neurenix.nn import Module
+from neurenix.tensor import Tensor
+import numpy as np
+
+class CustomLayer(Module):
+    def __init__(self, in_features, out_features):
+        super().__init__()
+        
+        # Register parameters
+        weight_data = np.random.randn(out_features, in_features) * 0.01
+        self.weight = Tensor(weight_data, requires_grad=True)
+        self.register_parameter('weight', self.weight)
+        
+        bias_data = np.zeros(out_features)
+        self.bias = Tensor(bias_data, requires_grad=True)
+        self.register_parameter('bias', self.bias)
+    
+    def forward(self, x):
+        return x.matmul(self.weight.transpose(0, 1)) + self.bias
+```
+
+### Module Methods
+
+<Tabs>
+  <Tab title="Training Mode">
+    ```python
+    from neurenix.nn import Sequential, Linear, Dropout
+    
+    model = Sequential(
+        Linear(100, 50),
+        Dropout(0.5),
+        Linear(50, 10)
+    )
+    
+    # Set to training mode (affects Dropout, BatchNorm, etc.)
+    model.train()
+    print(model.is_training())  # True
+    
+    # Set to evaluation mode
+    model.eval()
+    print(model.is_training())  # False
+    ```
+  </Tab>
+  
+  <Tab title="Parameters">
+    ```python
+    from neurenix.nn import Linear
+    
+    layer = Linear(10, 5)
+    
+    # Get all parameters
+    params = layer.parameters()
+    print(f"Number of parameters: {len(params)}")
+    
+    # Parameters include weights and biases
+    for param in params:
+        print(param.shape)
+    ```
+  </Tab>
+  
+  <Tab title="Device Placement">
+    ```python
+    from neurenix.nn import Sequential, Linear
+    from neurenix.device import Device, DeviceType
+    
+    model = Sequential(
+        Linear(100, 50),
+        Linear(50, 10)
+    )
+    
+    # Move entire model to GPU
+    device = Device(DeviceType.CUDA, 0)
+    model.to(device)
+    
+    # All parameters are now on GPU
+    for param in model.parameters():
+        print(param.device)
+    ```
+  </Tab>
+</Tabs>
+
+## Linear Layers
+
+Fully connected (dense) layers for transforming tensor dimensions.
+
+```python
+from neurenix.nn import Linear
+from neurenix.tensor import Tensor
+
+# Create linear layer
+layer = Linear(
+    in_features=784,   # Input size
+    out_features=128,  # Output size
+    bias=True          # Include bias term (default)
+)
+
+# Forward pass
+x = Tensor.randn((32, 784))  # Batch of 32 samples
+output = layer(x)             # Shape: (32, 128)
+
+print(f"Weight shape: {layer.weight.shape}")  # (128, 784)
+print(f"Bias shape: {layer.bias.shape}")      # (128,)
+```
+
+<Info>
+Linear layers use Kaiming initialization by default, which is optimal for ReLU activations.
+</Info>
+
+### Linear Layer with Custom dtype
+
+```python
+from neurenix.nn import Linear
+from neurenix.tensor import DType
+from neurenix.device import Device, DeviceType
+
+layer = Linear(
+    in_features=512,
+    out_features=256,
+    bias=True,
+    dtype=DType.FLOAT64,
+    device=Device(DeviceType.CUDA, 0)
+)
+```
+
+## Activation Functions
+
+Neurenix provides all standard activation functions as `Module` subclasses.
+
+<Tabs>
+  <Tab title="ReLU Variants">
+    ```python
+    from neurenix.nn import ReLU, LeakyReLU, ELU, SELU
+    from neurenix.tensor import Tensor
+    
+    x = Tensor.randn((5, 5))
+    
+    # Standard ReLU
+    relu = ReLU()
+    out1 = relu(x)
+    
+    # Leaky ReLU
+    leaky = LeakyReLU(negative_slope=0.01)
+    out2 = leaky(x)
+    
+    # Exponential Linear Unit
+    elu = ELU(alpha=1.0)
+    out3 = elu(x)
+    
+    # Scaled ELU
+    selu = SELU()
+    out4 = selu(x)
+    ```
+  </Tab>
+  
+  <Tab title="Sigmoid & Tanh">
+    ```python
+    from neurenix.nn import Sigmoid, Tanh
+    from neurenix.tensor import Tensor
+    
+    x = Tensor.randn((5, 5))
+    
+    # Sigmoid (outputs in range [0, 1])
+    sigmoid = Sigmoid()
+    probabilities = sigmoid(x)
+    
+    # Tanh (outputs in range [-1, 1])
+    tanh = Tanh()
+    normalized = tanh(x)
+    ```
+  </Tab>
+  
+  <Tab title="Softmax & GELU">
+    ```python
+    from neurenix.nn import Softmax, LogSoftmax, GELU
+    from neurenix.tensor import Tensor
+    
+    logits = Tensor.randn((10, 5))  # 10 samples, 5 classes
+    
+    # Softmax (for classification)
+    softmax = Softmax(dim=1)
+    probs = softmax(logits)
+    
+    # Log Softmax (more numerically stable)
+    log_softmax = LogSoftmax(dim=1)
+    log_probs = log_softmax(logits)
+    
+    # GELU (used in Transformers)
+    gelu = GELU(approximate=False)
+    out = gelu(Tensor.randn((5, 5)))
+    ```
+  </Tab>
+</Tabs>
+
+### In-Place Activations
+
+```python
+from neurenix.nn import ReLU, LeakyReLU
+from neurenix.tensor import Tensor
+
+# In-place operations save memory
+relu_inplace = ReLU(inplace=True)
+leaky_inplace = LeakyReLU(negative_slope=0.2, inplace=True)
+
+x = Tensor.randn((100, 100))
+relu_inplace(x)  # Modifies x in-place
+```
+
+## Convolutional Layers
+
+Neurenix supports 1D, 2D, and 3D convolutions for processing sequential, image, and volumetric data.
+
+### Conv2d for Image Processing
+
+```python
+from neurenix.nn import Conv2d
+from neurenix.tensor import Tensor
+
+# Create 2D convolution layer
+conv = Conv2d(
+    in_channels=3,      # RGB input
+    out_channels=64,    # 64 feature maps
+    kernel_size=3,      # 3x3 kernel
+    stride=1,           # Stride of 1
+    padding=1           # Same padding
+)
+
+# Process batch of images
+images = Tensor.randn((32, 3, 224, 224))  # Batch, Channels, Height, Width
+features = conv(images)                    # Shape: (32, 64, 224, 224)
+
+print(f"Output shape: {features.shape}")
+print(f"Weight shape: {conv.weight.shape}")  # (64, 3, 3, 3)
+```
+
+<CodeGroup>
+```python Conv1d
+from neurenix.nn import Conv1d
+from neurenix.tensor import Tensor
+
+# 1D convolution for time series
+conv1d = Conv1d(
+    in_channels=16,
+    out_channels=32,
+    kernel_size=3,
+    stride=1,
+    padding=1
+)
+
+sequence = Tensor.randn((8, 16, 100))  # Batch, Channels, Length
+output = conv1d(sequence)               # Shape: (8, 32, 100)
+```
+
+```python Conv3d
+from neurenix.nn import Conv3d
+from neurenix.tensor import Tensor
+
+# 3D convolution for video or volumetric data
+conv3d = Conv3d(
+    in_channels=1,
+    out_channels=8,
+    kernel_size=3,
+    stride=1,
+    padding=1
+)
+
+volume = Tensor.randn((4, 1, 32, 32, 32))  # Batch, Channels, D, H, W
+output = conv3d(volume)                     # Shape: (4, 8, 32, 32, 32)
+```
+</CodeGroup>
+
+### Advanced Convolution Options
+
+```python
+from neurenix.nn import Conv2d
+
+# Strided convolution (downsampling)
+strided_conv = Conv2d(
+    in_channels=64,
+    out_channels=128,
+    kernel_size=3,
+    stride=2,        # Halves spatial dimensions
+    padding=1
+)
+
+# Dilated convolution (expanded receptive field)
+dilated_conv = Conv2d(
+    in_channels=64,
+    out_channels=64,
+    kernel_size=3,
+    stride=1,
+    padding=2,
+    dilation=2       # Increases receptive field
+)
+
+# Grouped convolution (efficient)
+grouped_conv = Conv2d(
+    in_channels=64,
+    out_channels=64,
+    kernel_size=3,
+    stride=1,
+    padding=1,
+    groups=8         # 8 separate convolutions
+)
+```
+
+## Sequential Container
+
+Chain modules together for quick model building.
+
+<Tabs>
+  <Tab title="List of Modules">
+    ```python
+    from neurenix.nn import Sequential, Linear, ReLU, Dropout
+    
+    model = Sequential(
+        Linear(784, 512),
+        ReLU(),
+        Dropout(0.2),
+        Linear(512, 256),
+        ReLU(),
+        Dropout(0.2),
+        Linear(256, 10)
+    )
+    
+    # Use the model
+    from neurenix.tensor import Tensor
+    x = Tensor.randn((32, 784))
+    output = model(x)
+    ```
+  </Tab>
+  
+  <Tab title="Named Modules">
+    ```python
+    from neurenix.nn import Sequential, Linear, ReLU
+    
+    model = Sequential({
+        'fc1': Linear(784, 512),
+        'relu1': ReLU(),
+        'fc2': Linear(512, 256),
+        'relu2': ReLU(),
+        'fc3': Linear(256, 10)
+    })
+    
+    # Access by name
+    first_layer = model['fc1']
+    ```
+  </Tab>
+  
+  <Tab title="Indexing & Slicing">
+    ```python
+    from neurenix.nn import Sequential, Linear, ReLU
+    
+    model = Sequential(
+        Linear(100, 50),
+        ReLU(),
+        Linear(50, 20),
+        ReLU(),
+        Linear(20, 10)
+    )
+    
+    # Access by index
+    first_layer = model[0]
+    last_layer = model[-1]
+    
+    # Slice to create sub-model
+    feature_extractor = model[:4]  # First 4 layers
+    ```
+  </Tab>
+</Tabs>
+
+## Loss Functions
+
+All loss functions inherit from the `Loss` base class and support different reduction modes.
+
+### Classification Losses
+
+<CodeGroup>
+```python Cross Entropy
+from neurenix.nn import CrossEntropyLoss
+from neurenix.tensor import Tensor
+
+loss_fn = CrossEntropyLoss(reduction='mean')
+
+# Predictions (logits)
+logits = Tensor.randn((32, 10))  # 32 samples, 10 classes
+
+# Targets (class indices)
+targets = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 3 + [0, 0], dtype="int64")
+
+loss = loss_fn(logits, targets)
+print(f"Loss: {loss.numpy()}")
+```
+
+```python Binary Cross Entropy
+from neurenix.nn import BCELoss, BCEWithLogitsLoss
+from neurenix.tensor import Tensor
+
+# For probabilities (sigmoid already applied)
+bce = BCELoss()
+preds = Tensor([[0.8], [0.3], [0.6]])
+targets = Tensor([[1.0], [0.0], [1.0]])
+loss1 = bce(preds, targets)
+
+# For logits (includes sigmoid)
+bce_logits = BCEWithLogitsLoss()
+logits = Tensor([[2.0], [-1.0], [0.5]])
+loss2 = bce_logits(logits, targets)
+```
+</CodeGroup>
+
+### Regression Losses
+
+<CodeGroup>
+```python MSE Loss
+from neurenix.nn import MSELoss
+from neurenix.tensor import Tensor
+
+mse = MSELoss(reduction='mean')
+
+predictions = Tensor([[1.5], [2.3], [3.1]])
+targets = Tensor([[1.0], [2.0], [3.0]])
+
+loss = mse(predictions, targets)
+print(f"MSE: {loss.numpy()}")
+```
+
+```python L1 Loss
+from neurenix.nn import L1Loss
+from neurenix.tensor import Tensor
+
+l1 = L1Loss(reduction='mean')
+
+predictions = Tensor([[1.5], [2.3], [3.1]])
+targets = Tensor([[1.0], [2.0], [3.0]])
+
+loss = l1(predictions, targets)
+print(f"L1: {loss.numpy()}")
+```
+</CodeGroup>
+
+### Reduction Modes
+
+```python
+from neurenix.nn import MSELoss
+from neurenix.tensor import Tensor
+
+preds = Tensor([[1, 2], [3, 4]])
+targets = Tensor([[2, 2], [3, 3]])
+
+# No reduction - returns loss per element
+loss_none = MSELoss(reduction='none')
+print(loss_none(preds, targets))  # Shape: (2, 2)
+
+# Mean reduction
+loss_mean = MSELoss(reduction='mean')
+print(loss_mean(preds, targets))  # Scalar
+
+# Sum reduction
+loss_sum = MSELoss(reduction='sum')
+print(loss_sum(preds, targets))   # Scalar
+```
+
+## Complete Training Example
+
+```python
+from neurenix.nn import Sequential, Linear, ReLU, CrossEntropyLoss
+from neurenix.tensor import Tensor
+from neurenix.device import Device, DeviceType
+from neurenix.optim import Adam
+
+# Define model
+model = Sequential(
+    Linear(784, 256),
+    ReLU(),
+    Linear(256, 128),
+    ReLU(),
+    Linear(128, 10)
+)
+
+# Move to GPU if available
+from neurenix.device import get_device_count
+if get_device_count(DeviceType.CUDA) > 0:
+    device = Device(DeviceType.CUDA, 0)
+    model.to(device)
+else:
+    device = Device(DeviceType.CPU)
+
+# Setup training
+loss_fn = CrossEntropyLoss()
+optimizer = Adam(model.parameters(), lr=0.001)
+
+# Training loop
+for epoch in range(10):
+    model.train()
+    
+    # Get batch (placeholder)
+    inputs = Tensor.randn((32, 784), device=device)
+    targets = Tensor([i % 10 for i in range(32)], dtype="int64", device=device)
+    
+    # Forward pass
+    outputs = model(inputs)
+    loss = loss_fn(outputs, targets)
+    
+    # Backward pass
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    
+    if epoch % 2 == 0:
+        print(f"Epoch {epoch}, Loss: {loss.numpy():.4f}")
+
+# Evaluation
+model.eval()
+with Tensor.no_grad():
+    test_inputs = Tensor.randn((10, 784), device=device)
+    predictions = model(test_inputs)
+    print(f"Predictions shape: {predictions.shape}")
+```
+
+## Model Inspection
+
+```python
+from neurenix.nn import Sequential, Linear, ReLU
+
+model = Sequential(
+    Linear(100, 50),
+    ReLU(),
+    Linear(50, 10)
+)
+
+# Count parameters
+total_params = sum(p.size for p in model.parameters())
+print(f"Total parameters: {total_params}")
+
+# Iterate through modules
+for i, module in enumerate(model):
+    print(f"Layer {i}: {module}")
+
+# Get parameter shapes
+for i, param in enumerate(model.parameters()):
+    print(f"Parameter {i} shape: {param.shape}")
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Sequential for Simple Models" icon="layer-group">
+    Sequential is perfect for feed-forward architectures without branching
+  </Card>
+  
+  <Card title="Custom Module for Complex Logic" icon="code">
+    Implement custom Module subclasses when you need control flow or multiple paths
+  </Card>
+  
+  <Card title="Remember train/eval Modes" icon="toggle-on">
+    Always call `.train()` and `.eval()` to properly configure layers like Dropout
+  </Card>
+  
+  <Card title="Move Model and Data Together" icon="arrows-left-right">
+    Ensure both model and input tensors are on the same device
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+- [Tensors](/core/tensors) - Working with tensor operations
+- [Devices](/core/devices) - Managing hardware placement
+- [Architecture](/core/architecture) - Understanding the framework design

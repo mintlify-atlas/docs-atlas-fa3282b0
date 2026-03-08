@@ -1,0 +1,618 @@
+---
+title: 'AutoML'
+description: 'Automated hyperparameter optimization and neural architecture search'
+icon: 'wand-magic-sparkles'
+---
+
+## Overview
+
+Neurenix AutoML provides tools for automated machine learning, including hyperparameter optimization, neural architecture search (NAS), model selection, and pipeline automation. Automate the tedious parts of ML development and focus on your data and business logic.
+
+## Hyperparameter Search
+
+Automate the search for optimal hyperparameters.
+
+### Grid Search
+
+Exhaustive search over all parameter combinations:
+
+```python
+from neurenix.automl import GridSearch
+import neurenix as nx
+
+# Define parameter space
+param_space = {
+    'learning_rate': [0.001, 0.01, 0.1],
+    'batch_size': [16, 32, 64],
+    'hidden_size': [64, 128, 256],
+    'dropout': [0.1, 0.3, 0.5]
+}
+
+# Create grid search
+search = GridSearch(
+    param_space=param_space,
+    max_trials=50  # Limit trials if space is large
+)
+
+# Define objective function
+def objective(params):
+    model = create_model(
+        hidden_size=params['hidden_size'],
+        dropout=params['dropout']
+    )
+    optimizer = nx.optim.Adam(
+        model.parameters(),
+        lr=params['learning_rate']
+    )
+    
+    # Train and return validation accuracy
+    accuracy = train_and_evaluate(model, optimizer, params['batch_size'])
+    return accuracy
+
+# Run search
+best_params = search.search(objective)
+print(f"Best parameters: {best_params}")
+print(f"Best score: {search.best_score}")
+```
+
+**Reference:** `neurenix/automl/search.py:66`
+
+### Random Search
+
+Randomly sample from parameter space:
+
+```python
+from neurenix.automl import RandomSearch
+
+# Define parameter space
+param_space = {
+    'learning_rate': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1],
+    'batch_size': [8, 16, 32, 64, 128],
+    'hidden_size': [32, 64, 128, 256, 512],
+    'num_layers': [1, 2, 3, 4, 5],
+    'dropout': [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+}
+
+# Create random search
+search = RandomSearch(
+    param_space=param_space,
+    max_trials=100  # Number of random trials
+)
+
+# Run search
+best_params = search.search(objective)
+
+# Get all results
+results = search.get_results()
+for params, score in results:
+    print(f"Score: {score:.4f}, Params: {params}")
+```
+
+**Reference:** `neurenix/automl/search.py:106`
+
+### Bayesian Optimization
+
+Smart sampling using Gaussian processes:
+
+```python
+from neurenix.automl import BayesianOptimization
+
+# Define parameter space
+param_space = {
+    'learning_rate': [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1],
+    'batch_size': [8, 16, 32, 64, 128],
+    'hidden_size': [64, 128, 256, 512],
+    'weight_decay': [0.0, 1e-5, 1e-4, 1e-3, 1e-2]
+}
+
+# Create Bayesian optimization search
+search = BayesianOptimization(
+    param_space=param_space,
+    max_trials=50,
+    exploration_weight=0.1  # Balance exploration vs exploitation
+)
+
+# Run search (automatically explores promising regions)
+best_params = search.search(objective)
+print(f"Best parameters found: {best_params}")
+```
+
+**Reference:** `neurenix/automl/search.py:139`
+
+### Evolutionary Search
+
+Use evolutionary algorithms for optimization:
+
+```python
+from neurenix.automl import EvolutionarySearch
+
+# Define parameter space
+param_space = {
+    'learning_rate': [0.0001, 0.0005, 0.001, 0.005, 0.01],
+    'batch_size': [16, 32, 64],
+    'hidden_size': [64, 128, 256],
+    'num_layers': [2, 3, 4, 5],
+    'activation': ['relu', 'gelu', 'swish'],
+    'optimizer': ['adam', 'sgd', 'adamw']
+}
+
+# Create evolutionary search
+search = EvolutionarySearch(
+    param_space=param_space,
+    max_trials=100,
+    population_size=20,
+    mutation_prob=0.1
+)
+
+# Run evolutionary optimization
+best_params = search.search(objective)
+```
+
+**Reference:** `neurenix/automl/search.py:286`
+
+## Neural Architecture Search (NAS)
+
+Automate the design of neural network architectures.
+
+### ENAS (Efficient Neural Architecture Search)
+
+```python
+from neurenix.automl import ENAS
+import neurenix as nx
+
+# Define architecture search space
+search_space = {
+    'in_channels': [3],
+    'num_layers': [3, 4, 5],
+    'initial_filters': [16, 32, 64],
+    'kernel_size_0': [3, 5, 7],
+    'kernel_size_1': [3, 5, 7],
+    'kernel_size_2': [3, 5, 7],
+    'pool_0': [True, False],
+    'pool_1': [True, False],
+    'pool_2': [True, False],
+    'fc_size': [64, 128, 256],
+    'num_classes': [10]
+}
+
+# Create ENAS search
+enas = ENAS(
+    search_space=search_space,
+    max_trials=50,
+    controller_hidden_size=64,
+    controller_temperature=5.0
+)
+
+# Define objective function
+def train_architecture(model):
+    optimizer = nx.optim.Adam(model.parameters(), lr=0.001)
+    
+    # Train for a few epochs
+    for epoch in range(5):
+        train_one_epoch(model, train_loader, optimizer)
+    
+    # Return validation accuracy
+    return evaluate(model, val_loader)
+
+# Search for best architecture
+best_model = enas.search(train_architecture)
+print(f"Best architecture found with score: {enas.best_score}")
+
+# Use best architecture
+final_model = best_model
+train_full(final_model)  # Train fully
+```
+
+**Reference:** `neurenix/automl/nas.py:65`
+
+### DARTS (Differentiable Architecture Search)
+
+```python
+from neurenix.automl import DARTS
+
+# Define search space
+search_space = {
+    'in_channels': [3],
+    'num_layers': [3, 4, 5],
+    'initial_filters': [16, 32],
+    'kernel_size_0': [3, 5],
+    'kernel_size_1': [3, 5],
+    'kernel_size_2': [3, 5],
+    'fc_size': [128, 256],
+    'num_classes': [10]
+}
+
+# Create DARTS search
+darts = DARTS(
+    search_space=search_space,
+    max_trials=30,
+    num_epochs=50,
+    batch_size=64
+)
+
+# Run differentiable architecture search
+best_model = darts.search(train_architecture)
+print(f"Best architecture: {best_model}")
+```
+
+**Reference:** `neurenix/automl/nas.py:164`
+
+### PNAS (Progressive Neural Architecture Search)
+
+```python
+from neurenix.automl import PNAS
+
+# Define search space
+search_space = {
+    'in_channels': [3],
+    'num_layers': [3, 4, 5, 6],
+    'initial_filters': [16, 32, 64],
+    'kernel_size_0': [3, 5, 7],
+    'kernel_size_1': [3, 5, 7],
+    'kernel_size_2': [3, 5, 7],
+    'fc_size': [64, 128, 256, 512],
+    'num_classes': [10]
+}
+
+# Create PNAS search
+pnas = PNAS(
+    search_space=search_space,
+    max_trials=40,
+    num_expand=5,           # Expand top 5 architectures
+    predictor_hidden_size=64
+)
+
+# Run progressive search
+best_model = pnas.search(train_architecture)
+print(f"Best model score: {pnas.best_score}")
+```
+
+**Reference:** `neurenix/automl/nas.py:272`
+
+## Complete AutoML Pipeline
+
+Combine hyperparameter search with architecture search:
+
+```python
+import neurenix as nx
+from neurenix.automl import BayesianOptimization, ENAS
+
+# Stage 1: Find good architecture
+print("Stage 1: Architecture Search")
+arch_search_space = {
+    'num_layers': [2, 3, 4],
+    'hidden_size': [64, 128, 256],
+    'kernel_size': [3, 5, 7]
+}
+
+enas = ENAS(search_space=arch_search_space, max_trials=20)
+best_architecture = enas.search(lambda m: quick_train(m, epochs=3))
+
+# Stage 2: Optimize hyperparameters for best architecture
+print("Stage 2: Hyperparameter Optimization")
+hparam_space = {
+    'learning_rate': [0.0001, 0.0003, 0.001, 0.003, 0.01],
+    'batch_size': [16, 32, 64],
+    'weight_decay': [0, 1e-5, 1e-4, 1e-3],
+    'optimizer': ['adam', 'adamw', 'sgd']
+}
+
+def objective(params):
+    model = best_architecture.clone()
+    
+    if params['optimizer'] == 'adam':
+        optimizer = nx.optim.Adam(
+            model.parameters(),
+            lr=params['learning_rate'],
+            weight_decay=params['weight_decay']
+        )
+    elif params['optimizer'] == 'adamw':
+        optimizer = nx.optim.AdamW(
+            model.parameters(),
+            lr=params['learning_rate'],
+            weight_decay=params['weight_decay']
+        )
+    else:
+        optimizer = nx.optim.SGD(
+            model.parameters(),
+            lr=params['learning_rate'],
+            weight_decay=params['weight_decay'],
+            momentum=0.9
+        )
+    
+    accuracy = train_and_evaluate(model, optimizer, params['batch_size'])
+    return accuracy
+
+bayes_opt = BayesianOptimization(param_space=hparam_space, max_trials=30)
+best_hparams = bayes_opt.search(objective)
+
+# Stage 3: Final training
+print("Stage 3: Final Training")
+final_model = best_architecture.clone()
+final_optimizer = create_optimizer(final_model, best_hparams)
+train_full(final_model, final_optimizer, epochs=100)
+
+print(f"Final test accuracy: {evaluate(final_model, test_loader):.2f}%")
+```
+
+## Model Selection
+
+Automate model architecture selection:
+
+```python
+from neurenix.automl import AutoModelSelection
+
+# Define candidate models
+model_configs = [
+    {'type': 'resnet', 'depth': 18},
+    {'type': 'resnet', 'depth': 34},
+    {'type': 'mobilenet', 'width': 1.0},
+    {'type': 'mobilenet', 'width': 0.75},
+    {'type': 'efficientnet', 'version': 'b0'},
+    {'type': 'efficientnet', 'version': 'b1'},
+]
+
+# Automatically select best model
+auto_selection = AutoModelSelection(model_configs)
+best_model_config = auto_selection.select(
+    train_data=train_loader,
+    val_data=val_loader,
+    metric='accuracy',
+    budget_hours=4.0  # Time budget
+)
+
+print(f"Best model: {best_model_config}")
+```
+
+**Reference:** `neurenix/automl/__init__.py:22`
+
+## Cross-Validation
+
+Automated cross-validation for model evaluation:
+
+```python
+from neurenix.automl import CrossValidation
+
+# K-fold cross-validation
+cv = CrossValidation(
+    n_splits=5,
+    shuffle=True,
+    random_state=42
+)
+
+scores = cv.evaluate(
+    model=model,
+    data=full_dataset,
+    metric='accuracy'
+)
+
+print(f"Cross-validation scores: {scores}")
+print(f"Mean: {scores.mean():.4f} +/- {scores.std():.4f}")
+```
+
+**Reference:** `neurenix/automl/__init__.py:24`
+
+## Feature Selection
+
+Automatic feature selection:
+
+```python
+from neurenix.automl import FeatureSelection
+
+# Automatic feature selection
+fs = FeatureSelection(method='importance')  # or 'correlation', 'variance'
+
+selected_features = fs.select(
+    X=features,
+    y=labels,
+    n_features=50  # Select top 50 features
+)
+
+print(f"Selected {len(selected_features)} features")
+print(f"Feature importance: {fs.get_importance()}")
+```
+
+**Reference:** `neurenix/automl/__init__.py:29`
+
+## Data Preprocessing Pipeline
+
+Automated data preprocessing:
+
+```python
+from neurenix.automl import DataPreprocessing
+
+# Automatic preprocessing pipeline
+preprocessor = DataPreprocessing(
+    normalize=True,
+    handle_missing='mean',  # or 'median', 'drop'
+    encode_categorical=True,
+    remove_outliers=True,
+    outlier_std=3.0
+)
+
+# Fit and transform
+X_train_processed = preprocessor.fit_transform(X_train)
+X_test_processed = preprocessor.transform(X_test)
+```
+
+**Reference:** `neurenix/automl/__init__.py:30`
+
+## AutoML Pipeline
+
+End-to-end automated ML pipeline:
+
+```python
+from neurenix.automl import AutoPipeline
+import neurenix as nx
+
+# Create complete AutoML pipeline
+pipeline = AutoPipeline(
+    task='classification',  # or 'regression', 'segmentation'
+    time_budget=3600,       # 1 hour
+    metric='accuracy',
+    n_jobs=4                # Parallel trials
+)
+
+# Fit pipeline (handles everything)
+pipeline.fit(
+    X_train=X_train,
+    y_train=y_train,
+    X_val=X_val,
+    y_val=y_val
+)
+
+# Get best model
+best_model = pipeline.get_best_model()
+
+# Make predictions
+predictions = best_model.predict(X_test)
+
+# Get pipeline report
+report = pipeline.get_report()
+print(report)
+```
+
+**Reference:** `neurenix/automl/__init__.py:27`
+
+## Best Practices
+
+### 1. Start with Random Search
+
+```python
+# Random search is fastest for initial exploration
+search = RandomSearch(param_space, max_trials=50)
+best = search.search(objective)
+
+# Refine with Bayesian optimization
+refined_space = create_refined_space(best)
+bayes = BayesianOptimization(refined_space, max_trials=30)
+final_best = bayes.search(objective)
+```
+
+### 2. Use Early Stopping
+
+```python
+def objective_with_early_stopping(params):
+    model = create_model(params)
+    optimizer = create_optimizer(model, params)
+    
+    best_val_loss = float('inf')
+    patience = 0
+    
+    for epoch in range(50):
+        train_one_epoch(model, train_loader, optimizer)
+        val_loss = evaluate_loss(model, val_loader)
+        
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience = 0
+        else:
+            patience += 1
+            if patience >= 5:  # Early stop
+                break
+    
+    return -best_val_loss
+```
+
+### 3. Use Smaller Datasets for Search
+
+```python
+# Use subset for faster search
+train_subset = subset_data(train_data, fraction=0.2)
+val_subset = subset_data(val_data, fraction=0.2)
+
+def fast_objective(params):
+    model = create_model(params)
+    # Train on subset
+    accuracy = train_and_evaluate(
+        model, 
+        train_subset, 
+        val_subset,
+        epochs=10  # Fewer epochs
+    )
+    return accuracy
+
+# Run search
+best_params = search.search(fast_objective)
+
+# Full training with best params
+final_model = create_model(best_params)
+train_full(final_model, full_train_data, epochs=100)
+```
+
+### 4. Parallelize Search
+
+```python
+import concurrent.futures
+
+def parallel_search(param_space, objective, n_trials, n_workers=4):
+    search = RandomSearch(param_space, max_trials=n_trials)
+    
+    # Generate all parameter combinations
+    param_list = [search._sample_params() for _ in range(n_trials)]
+    
+    # Evaluate in parallel
+    with concurrent.futures.ProcessPoolExecutor(max_workers=n_workers) as executor:
+        scores = list(executor.map(objective, param_list))
+    
+    # Find best
+    best_idx = scores.index(max(scores))
+    return param_list[best_idx], scores[best_idx]
+```
+
+### 5. Log and Track Experiments
+
+```python
+import json
+import time
+
+class LoggingSearch:
+    def __init__(self, search, log_file='search_log.json'):
+        self.search = search
+        self.log_file = log_file
+        self.results = []
+    
+    def objective_wrapper(self, objective):
+        def wrapped(params):
+            start_time = time.time()
+            score = objective(params)
+            elapsed = time.time() - start_time
+            
+            result = {
+                'params': params,
+                'score': score,
+                'time': elapsed,
+                'timestamp': time.time()
+            }
+            self.results.append(result)
+            
+            # Save to file
+            with open(self.log_file, 'w') as f:
+                json.dump(self.results, f, indent=2)
+            
+            return score
+        return wrapped
+    
+    def search(self, objective):
+        return self.search.search(self.objective_wrapper(objective))
+
+# Use logging search
+logging_search = LoggingSearch(RandomSearch(param_space, max_trials=50))
+best = logging_search.search(objective)
+```
+
+## Performance Tips
+
+1. **Use GPU acceleration** for neural architecture search
+2. **Cache results** to avoid re-evaluating same configurations
+3. **Use warm starting** from previous searches
+4. **Implement early stopping** in objective function
+5. **Parallelize trials** when possible
+6. **Use transfer learning** for faster architecture evaluation
+
+## Related Topics
+
+- [Hyperparameter Tuning](/training/hyperparameters) - Manual tuning strategies
+- [Model Selection](/training/model-selection) - Choosing architectures
+- [Performance Optimization](/optimization/performance) - Speed up training
+- [Neural Architecture Search](/research/nas) - NAS research

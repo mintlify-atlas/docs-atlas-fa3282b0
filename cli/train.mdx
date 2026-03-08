@@ -1,0 +1,360 @@
+---
+title: Training Models
+description: Train models using the neurenix run command
+---
+
+<Note>
+  Model training in Neurenix is performed using the `run` command. This page provides additional context and examples specific to training workflows.
+</Note>
+
+## Overview
+
+The `neurenix run` command is used to train models. It executes your training script with configurable parameters and manages the training environment.
+
+For complete command reference, see the [run command documentation](/cli/run).
+
+## Quick Start
+
+```bash
+# Initialize a project
+neurenix init --name my-model
+
+# Navigate to project
+cd my-model
+
+# Train with default settings
+neurenix run train.py
+```
+
+## Training Workflows
+
+### Basic Training
+
+```bash
+# Train with config file
+neurenix run train.py --config config.json
+```
+
+### Custom Hyperparameters
+
+```bash
+# Override training parameters
+neurenix run train.py \
+  --epochs 100 \
+  --batch-size 64 \
+  --learning-rate 0.001
+```
+
+### GPU Training
+
+```bash
+# Auto-detect and use GPU
+neurenix run train.py --device auto
+
+# Force specific GPU
+neurenix run train.py --device cuda
+
+# Force CPU training
+neurenix run train.py --device cpu
+```
+
+### Distributed Training
+
+For distributed training across multiple GPUs or nodes, configure your training script to use Neurenix's distributed training utilities:
+
+```python
+import neurenix
+from neurenix.distributed import DistributedTrainer
+
+config = neurenix.load_config("config.json")
+
+# Initialize distributed training
+trainer = DistributedTrainer(
+    model=neurenix.create_model(config["model"]),
+    backend="nccl"  # or "gloo" for CPU
+)
+
+trainer.train(
+    train_data,
+    val_data,
+    epochs=config["training"]["epochs"]
+)
+```
+
+Then run with:
+
+```bash
+neurenix run train_distributed.py --device auto
+```
+
+## Monitoring Training
+
+While training is running, you can monitor progress in real-time:
+
+```bash
+# In another terminal
+neurenix monitor --log-dir logs
+```
+
+This displays:
+- Current epoch and batch
+- Training and validation metrics
+- Loss curves
+- Hardware utilization
+
+## Configuration Examples
+
+### Image Classification
+
+```json
+{
+  "model": {
+    "type": "resnet",
+    "depth": 50,
+    "num_classes": 10
+  },
+  "training": {
+    "batch_size": 128,
+    "epochs": 90,
+    "learning_rate": 0.1,
+    "optimizer": "sgd",
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "scheduler": {
+      "type": "step",
+      "step_size": 30,
+      "gamma": 0.1
+    }
+  },
+  "hardware": {
+    "device": "auto",
+    "precision": "mixed"
+  }
+}
+```
+
+### Natural Language Processing
+
+```json
+{
+  "model": {
+    "type": "transformer",
+    "num_layers": 12,
+    "hidden_size": 768,
+    "num_heads": 12
+  },
+  "training": {
+    "batch_size": 32,
+    "epochs": 3,
+    "learning_rate": 0.00005,
+    "optimizer": "adamw",
+    "warmup_steps": 1000,
+    "max_grad_norm": 1.0
+  },
+  "hardware": {
+    "device": "auto",
+    "precision": "fp16"
+  }
+}
+```
+
+### Reinforcement Learning
+
+```json
+{
+  "model": {
+    "type": "ppo",
+    "policy_network": {
+      "layers": [256, 256],
+      "activation": "relu"
+    },
+    "value_network": {
+      "layers": [256, 256],
+      "activation": "relu"
+    }
+  },
+  "training": {
+    "num_steps": 2048,
+    "num_epochs": 10,
+    "batch_size": 64,
+    "learning_rate": 0.0003,
+    "gamma": 0.99,
+    "gae_lambda": 0.95
+  },
+  "hardware": {
+    "device": "auto"
+  }
+}
+```
+
+## Training Script Template
+
+Here's a comprehensive training script template:
+
+```python
+import neurenix
+from neurenix.nn import Module
+from neurenix.optim import Adam
+from neurenix.data import DataLoader
+import os
+
+# Load configuration
+config_path = os.environ.get('NEURENIX_CONFIG', 'config.json')
+config = neurenix.load_config(config_path)
+
+# Set device
+neurenix.set_device(
+    config["hardware"]["device"],
+    precision=config["hardware"].get("precision", "float32")
+)
+
+# Load data
+print("Loading datasets...")
+train_data = neurenix.load_dataset("data/train")
+val_data = neurenix.load_dataset("data/val")
+
+train_loader = DataLoader(
+    train_data,
+    batch_size=config["training"]["batch_size"],
+    shuffle=True
+)
+val_loader = DataLoader(
+    val_data,
+    batch_size=config["training"]["batch_size"]
+)
+
+# Create model
+print("Creating model...")
+model = neurenix.create_model(config["model"])
+
+# Create optimizer
+optimizer = Adam(
+    model.parameters(),
+    lr=config["training"]["learning_rate"]
+)
+
+# Create scheduler if specified
+scheduler = None
+if "scheduler" in config["training"]:
+    scheduler = neurenix.create_scheduler(
+        optimizer,
+        config["training"]["scheduler"]
+    )
+
+# Train
+print("Starting training...")
+neurenix.train(
+    model,
+    train_loader,
+    val_loader,
+    optimizer=optimizer,
+    scheduler=scheduler,
+    epochs=config["training"]["epochs"],
+    log_dir="logs"
+)
+
+# Save model
+print("Saving model...")
+neurenix.save_model(model, "models/model.nrx")
+print("Training completed!")
+```
+
+## Best Practices
+
+### 1. Use Version Control
+
+Track your training configurations:
+
+```bash
+git add config.json train.py
+git commit -m "Training configuration for experiment 1"
+```
+
+### 2. Save Checkpoints
+
+Modify your training script to save checkpoints:
+
+```python
+neurenix.train(
+    model,
+    train_loader,
+    val_loader,
+    checkpoint_dir="checkpoints",
+    save_frequency=5  # Save every 5 epochs
+)
+```
+
+### 3. Log Everything
+
+Enable comprehensive logging:
+
+```python
+neurenix.train(
+    model,
+    train_loader,
+    val_loader,
+    log_dir="logs",
+    log_metrics=["loss", "accuracy", "f1_score"],
+    log_frequency=10  # Log every 10 batches
+)
+```
+
+### 4. Validate Regularly
+
+Run validation during training to catch overfitting:
+
+```bash
+neurenix run train.py
+
+# Monitor validation metrics
+neurenix monitor --log-dir logs --metrics val_loss,val_accuracy
+```
+
+### 5. Resume from Checkpoints
+
+```python
+# Load checkpoint if it exists
+if os.path.exists("checkpoints/latest.nrx"):
+    model = neurenix.load_model("checkpoints/latest.nrx")
+    print("Resumed from checkpoint")
+```
+
+## Troubleshooting
+
+### Out of Memory
+
+```bash
+# Reduce batch size
+neurenix run train.py --batch-size 16
+
+# Use mixed precision
+# Add to config.json: "precision": "mixed"
+```
+
+### Slow Training
+
+```bash
+# Verify GPU usage
+neurenix hardware --info
+
+# Use auto device selection
+neurenix run train.py --device auto
+```
+
+### Poor Convergence
+
+```bash
+# Try different learning rate
+neurenix run train.py --learning-rate 0.0001
+
+# Increase epochs
+neurenix run train.py --epochs 100
+```
+
+## See Also
+
+- [Run command](/cli/run) - Complete command reference
+- [Eval command](/cli/eval) - Evaluate trained models
+- [Monitor command](/cli/monitor) - Monitor training progress
+- [Optimize command](/cli/optimize) - Optimize models
+- [Save command](/cli/save) - Save model state

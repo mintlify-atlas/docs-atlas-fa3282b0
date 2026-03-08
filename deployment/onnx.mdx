@@ -1,0 +1,258 @@
+---
+title: ONNX Model Export and Import
+description: Convert Neurenix models to and from ONNX format for framework interoperability
+---
+
+## Overview
+
+The ONNX support module enables seamless conversion between Neurenix models and the ONNX (Open Neural Network Exchange) format, allowing you to leverage models across different machine learning frameworks and deployment platforms.
+
+## ONNXConverter Class
+
+The `ONNXConverter` class provides the core functionality for importing and exporting models.
+
+### Initialization
+
+```python
+from neurenix.onnx_support import ONNXConverter
+
+converter = ONNXConverter()
+```
+
+The converter automatically initializes with supported ONNX operations mapped to Neurenix equivalents.
+
+### Supported Operations
+
+The converter supports the following ONNX operations:
+
+**Layers:**
+- `Conv` → Conv2d
+- `Gemm`, `MatMul` → Linear
+- `BatchNormalization` → BatchNorm2d
+- `MaxPool` → MaxPool2d
+- `AveragePool` → AvgPool2d
+
+**Activations:**
+- `Relu`, `Sigmoid`, `Tanh`, `LeakyRelu`
+- `Dropout`
+
+**Operations:**
+- `Add`, `Mul`, `Sub`, `Div` (tensor operations)
+- `Reshape`, `Transpose`, `Flatten`
+- `ReduceMean`, `ReduceSum`
+
+## Exporting Models to ONNX
+
+### Basic Export
+
+Export a Neurenix model to ONNX format:
+
+```python
+from neurenix.onnx_support import to_onnx
+from neurenix.nn import Sequential, Linear, ReLU
+
+# Define your model
+model = Sequential(
+    Linear(784, 256),
+    ReLU(),
+    Linear(256, 10)
+)
+
+# Export to ONNX
+input_shape = (1, 784)
+output_path = to_onnx(
+    model=model,
+    input_shape=input_shape,
+    output_path="model.onnx"
+)
+
+print(f"Model exported to {output_path}")
+```
+
+### Export with Dynamic Axes
+
+Support variable batch sizes and sequence lengths:
+
+```python
+from neurenix.onnx_support import ONNXConverter
+
+converter = ONNXConverter()
+
+# Define dynamic axes
+dynamic_axes = {
+    'input': {0: 'batch_size'},
+    'output': {0: 'batch_size'}
+}
+
+converter.export_model(
+    model=model,
+    input_shape=(1, 784),
+    output_path="model_dynamic.onnx",
+    opset_version=12,
+    dynamic_axes=dynamic_axes
+)
+```
+
+### Advanced Export Options
+
+```python
+converter.export_model(
+    model=model,
+    input_shape=(1, 3, 224, 224),
+    output_path="resnet.onnx",
+    opset_version=13,  # Specify ONNX opset version
+    dynamic_axes={
+        'input': {0: 'batch_size', 2: 'height', 3: 'width'},
+        'output': {0: 'batch_size'}
+    }
+)
+```
+
+## Importing Models from ONNX
+
+### Basic Import
+
+Load an ONNX model into Neurenix:
+
+```python
+from neurenix.onnx_support import from_onnx
+from neurenix.device import Device, DeviceType
+
+# Import from ONNX
+model = from_onnx("model.onnx")
+
+# Run inference
+input_data = Tensor([[1.0, 2.0, 3.0]])
+output = model(input_data)
+```
+
+### Import with Device Selection
+
+```python
+# Load on GPU
+device = Device(DeviceType.CUDA)
+model = from_onnx("model.onnx", device=device)
+
+# Load on CPU
+cpu_device = Device(DeviceType.CPU)
+model = from_onnx("model.onnx", device=cpu_device)
+```
+
+### Using the Converter Class
+
+```python
+converter = ONNXConverter()
+
+# Import model
+model = converter.import_model(
+    onnx_path="pretrained_model.onnx",
+    device=Device(DeviceType.CUDA)
+)
+
+# Model is now ready for inference or fine-tuning
+model.eval()
+```
+
+## Complete Workflow Example
+
+Here's a complete example of training, exporting, and re-importing:
+
+```python
+from neurenix import Tensor
+from neurenix.nn import Sequential, Linear, ReLU
+from neurenix.onnx_support import to_onnx, from_onnx
+import numpy as np
+
+# 1. Train a model
+model = Sequential(
+    Linear(10, 64),
+    ReLU(),
+    Linear(64, 32),
+    ReLU(),
+    Linear(32, 2)
+)
+
+# ... training code here ...
+
+# 2. Export to ONNX
+print("Exporting model...")
+to_onnx(
+    model=model,
+    input_shape=(1, 10),
+    output_path="trained_model.onnx",
+    opset_version=12,
+    dynamic_axes={'input': {0: 'batch'}, 'output': {0: 'batch'}}
+)
+
+# 3. Re-import for deployment
+print("Importing model...")
+deployed_model = from_onnx("trained_model.onnx")
+
+# 4. Verify the model works
+test_input = Tensor(np.random.randn(5, 10).astype(np.float32))
+output = deployed_model(test_input)
+print(f"Output shape: {output.shape}")
+```
+
+## Troubleshooting
+
+### Installation Requirements
+
+ONNX export and import require additional dependencies:
+
+```bash
+pip install torch onnx
+```
+
+### Common Issues
+
+**Unsupported Operations:**
+
+If you encounter unsupported operations:
+
+```python
+# Check supported operations
+converter = ONNXConverter()
+print(converter._supported_ops.keys())
+```
+
+**Data Type Compatibility:**
+
+ONNX supports multiple data types. The converter handles:
+- `FLOAT` (fp32)
+- `DOUBLE` (fp64)
+- `INT32`
+- `INT64`
+
+**Model Validation:**
+
+The converter automatically validates exported models:
+
+```python
+import onnx
+
+# Manual validation
+onnx_model = onnx.load("model.onnx")
+onnx.checker.check_model(onnx_model)
+print("Model is valid!")
+```
+
+## Best Practices
+
+1. **Test Before Deployment**: Always verify the exported model produces the same outputs as the original
+2. **Use Dynamic Axes**: Enable flexibility in production environments with variable input sizes
+3. **Specify Opset Version**: Use the latest stable opset version supported by your deployment platform
+4. **Model Validation**: Run the ONNX checker after export to catch potential issues early
+5. **Document Input/Output Shapes**: Keep track of expected tensor shapes for deployment
+
+## Integration with Deployment Platforms
+
+ONNX models can be deployed on:
+
+- **ONNX Runtime**: High-performance inference engine
+- **TensorRT**: NVIDIA's optimized inference engine
+- **CoreML**: Apple's ML framework
+- **Windows ML**: Microsoft's ML platform
+- **Edge Devices**: Mobile and embedded systems
+
+See the [Edge Devices](/deployment/edge-devices) guide for more details on deploying to resource-constrained environments.

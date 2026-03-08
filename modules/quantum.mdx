@@ -1,0 +1,505 @@
+---
+title: Quantum Computing
+description: Quantum computing integration with Qiskit and Cirq
+---
+
+# Quantum Computing
+
+The quantum module provides quantum computing capabilities, including quantum circuit construction, quantum algorithms, and integration with leading quantum frameworks like Qiskit and Cirq. This enables hybrid classical-quantum machine learning and quantum-enhanced optimization.
+
+## Overview
+
+Quantum computing leverages quantum mechanical phenomena like superposition and entanglement to solve certain problems exponentially faster than classical computers. Neurenix provides:
+
+- Quantum circuit construction and simulation
+- Integration with Qiskit and Cirq
+- Variational quantum algorithms
+- Hybrid classical-quantum neural networks
+
+## Quantum Circuits
+
+### Basic Circuit Construction
+
+```python
+from neurenix.quantum import QuantumCircuit
+import neurenix as nx
+
+# Create a quantum circuit with 3 qubits
+circuit = QuantumCircuit(num_qubits=3, name="my_circuit")
+
+# Add gates
+circuit.h(0)           # Hadamard gate on qubit 0
+circuit.cx(0, 1)       # CNOT gate from qubit 0 to 1
+circuit.x(2)           # Pauli-X gate on qubit 2
+circuit.ry(1, 0.5)     # RY rotation on qubit 1
+
+# Add measurement
+circuit.measure(0, 0)
+circuit.measure(1, 1)
+circuit.measure(2, 2)
+
+print(circuit)
+```
+
+### Quantum Gates
+
+```python
+from neurenix.quantum import QuantumCircuit
+import numpy as np
+
+circuit = QuantumCircuit(2)
+
+# Single-qubit gates
+circuit.h(0)           # Hadamard
+circuit.x(0)           # Pauli-X (NOT)
+circuit.y(0)           # Pauli-Y
+circuit.z(0)           # Pauli-Z
+circuit.rx(0, np.pi/4) # Rotation around X
+circuit.ry(0, np.pi/4) # Rotation around Y
+circuit.rz(0, np.pi/4) # Rotation around Z
+
+# Two-qubit gates
+circuit.cx(0, 1)       # CNOT (controlled-X)
+circuit.cz(0, 1)       # Controlled-Z
+```
+
+### Running Circuits
+
+```python
+# Run the circuit
+results = circuit.run(shots=1024)
+print(results)  # {'000': 512, '111': 512}
+
+# Get unitary matrix
+unitary = circuit.to_matrix()
+print(unitary.shape)  # (8, 8) for 3 qubits
+
+# Convert to tensor
+tensor = circuit.to_tensor()
+```
+
+## Parameterized Circuits
+
+Parameterized circuits are essential for variational quantum algorithms.
+
+```python
+from neurenix.quantum import ParameterizedCircuit
+
+# Create parameterized circuit
+circuit = ParameterizedCircuit(
+    num_qubits=2,
+    parameters=['theta1', 'theta2', 'theta3']
+)
+
+# Add parameterized gates
+circuit.rx_param(0, 'theta1')
+circuit.ry_param(1, 'theta2')
+circuit.cx(0, 1)
+circuit.rz_param(1, 'theta3')
+
+# Bind parameters to values
+bound_circuit = circuit.bind_parameters({
+    'theta1': 0.5,
+    'theta2': 1.2,
+    'theta3': 0.8
+})
+
+# Run the bound circuit
+results = bound_circuit.run(shots=1024)
+```
+
+## Circuit Templates
+
+Pre-built circuits for common quantum states and operations.
+
+```python
+from neurenix.quantum import CircuitTemplate
+
+# Bell pair (entangled state)
+bell_circuit = CircuitTemplate.bell_pair()
+
+# GHZ state
+ghz_circuit = CircuitTemplate.ghz_state(num_qubits=5)
+
+# Quantum Fourier Transform
+qft_circuit = CircuitTemplate.qft(num_qubits=4)
+
+# W state
+w_circuit = CircuitTemplate.w_state(num_qubits=3)
+```
+
+## Backend Integration
+
+### Qiskit Backend
+
+```python
+from neurenix.quantum import QiskitBackend, QuantumCircuit
+
+# Create circuit
+circuit = QuantumCircuit(2)
+circuit.h(0).cx(0, 1)
+circuit.measure(0, 0).measure(1, 1)
+
+# Use Qiskit backend
+backend = QiskitBackend()
+results = backend.run(circuit, shots=1024)
+print(results)  # Bell state measurement results
+
+# Get unitary
+unitary = backend.to_matrix(circuit)
+```
+
+### Cirq Backend
+
+```python
+from neurenix.quantum import CirqBackend
+
+# Use Cirq backend
+backend = CirqBackend()
+results = backend.run(circuit, shots=1024)
+unitary = backend.to_matrix(circuit)
+```
+
+## Variational Quantum Algorithms
+
+### VQE (Variational Quantum Eigensolver)
+
+Find ground state energy of molecular Hamiltonians.
+
+```python
+from neurenix.quantum import VQE, ParameterizedCircuit
+from neurenix.optim import Adam
+import neurenix as nx
+
+# Define ansatz (variational form)
+ansatz = ParameterizedCircuit(num_qubits=4)
+for i in range(4):
+    ansatz.ry_param(i, f'theta_{i}')
+for i in range(3):
+    ansatz.cx(i, i+1)
+
+# Define Hamiltonian (example: H2 molecule)
+hamiltonian = nx.tensor([
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 0.5, 0.2, 0.0],
+    [0.0, 0.2, 0.5, 0.0],
+    [0.0, 0.0, 0.0, 2.0]
+])
+
+# Create VQE instance
+vqe = VQE(
+    ansatz=ansatz,
+    hamiltonian=hamiltonian,
+    optimizer=Adam(lr=0.01)
+)
+
+# Run optimization
+ground_state_energy, optimal_params = vqe.run(max_iterations=100)
+print(f"Ground state energy: {ground_state_energy}")
+```
+
+### QAOA (Quantum Approximate Optimization Algorithm)
+
+Solve combinatorial optimization problems.
+
+```python
+from neurenix.quantum import QAOA
+import networkx as netx
+
+# Define problem (MaxCut)
+graph = netx.Graph()
+graph.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)])
+
+# Create QAOA instance
+qaoa = QAOA(
+    graph=graph,
+    num_layers=3,
+    optimizer=Adam(lr=0.1)
+)
+
+# Run optimization
+best_solution, best_value = qaoa.run(max_iterations=100)
+print(f"Best cut value: {best_value}")
+print(f"Best partition: {best_solution}")
+```
+
+### Quantum Phase Estimation
+
+```python
+from neurenix.quantum import QuantumPhaseEstimation
+
+# Estimate phase of unitary operator
+qpe = QuantumPhaseEstimation(
+    unitary=my_unitary,
+    precision_qubits=5
+)
+
+phase = qpe.estimate()
+print(f"Estimated phase: {phase}")
+```
+
+## Hybrid Quantum-Classical Models
+
+### Quantum Layer in Neural Network
+
+```python
+from neurenix.quantum import QuantumLayer, ParameterizedCircuit
+from neurenix.nn import Module, Linear
+import neurenix as nx
+
+class HybridModel(Module):
+    def __init__(self):
+        super().__init__()
+        
+        # Classical layers
+        self.fc1 = Linear(10, 4)
+        
+        # Quantum layer
+        circuit = ParameterizedCircuit(num_qubits=4)
+        for i in range(4):
+            circuit.rx_param(i, f'input_{i}')
+        for i in range(3):
+            circuit.cx(i, i+1)
+        for i in range(4):
+            circuit.ry_param(i, f'weight_{i}')
+        
+        self.quantum_layer = QuantumLayer(
+            circuit=circuit,
+            input_params=['input_0', 'input_1', 'input_2', 'input_3'],
+            weight_params=['weight_0', 'weight_1', 'weight_2', 'weight_3']
+        )
+        
+        # Output layer
+        self.fc2 = Linear(4, 2)
+    
+    def forward(self, x):
+        x = self.fc1(x).tanh()
+        x = self.quantum_layer(x)
+        x = self.fc2(x)
+        return x
+
+# Create and train model
+model = HybridModel()
+optimizer = nx.optim.Adam(model.parameters(), lr=0.01)
+
+# Training loop
+for epoch in range(100):
+    outputs = model(X_train)
+    loss = criterion(outputs, y_train)
+    
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+```
+
+### Quantum Convolutional Layer
+
+```python
+from neurenix.quantum import QuantumConv2d
+
+class QuantumCNN(Module):
+    def __init__(self):
+        super().__init__()
+        self.qconv1 = QuantumConv2d(
+            in_channels=1,
+            out_channels=4,
+            kernel_size=2,
+            num_qubits=4
+        )
+        self.fc = Linear(4 * 13 * 13, 10)
+    
+    def forward(self, x):
+        x = self.qconv1(x)
+        x = x.flatten(1)
+        x = self.fc(x)
+        return x
+```
+
+## Quantum Algorithms
+
+### Grover's Search Algorithm
+
+```python
+from neurenix.quantum import Grover
+
+# Search for marked item in unsorted database
+grover = Grover(
+    num_qubits=4,
+    marked_states=[5, 12]  # Items to search for
+)
+
+# Run algorithm
+results = grover.search(shots=1000)
+print(f"Found states: {results}")  # Should find 5 and 12 with high probability
+```
+
+### Shor's Factoring Algorithm
+
+```python
+from neurenix.quantum import Shor
+
+# Factor a number using quantum algorithm
+shor = Shor()
+factors = shor.factor(15)  # Factor N=15
+print(f"Factors of 15: {factors}")  # [3, 5]
+```
+
+## Quantum Utilities
+
+```python
+from neurenix.quantum.utils import (
+    state_fidelity,
+    density_matrix,
+    circuit_to_tensor,
+    quantum_gradient
+)
+
+# Calculate state fidelity
+fidelity = state_fidelity(state1, state2)
+
+# Get density matrix
+rho = density_matrix(circuit)
+
+# Convert circuit to tensor
+tensor = circuit_to_tensor(circuit)
+
+# Compute quantum gradient
+grad = quantum_gradient(circuit, observable)
+```
+
+## Example: Quantum Classifier
+
+```python
+import neurenix as nx
+from neurenix.quantum import QuantumLayer, ParameterizedCircuit
+from neurenix.nn import Module, Linear
+from neurenix.optim import Adam
+
+class QuantumClassifier(Module):
+    def __init__(self, num_qubits=4, num_classes=2):
+        super().__init__()
+        
+        # Create parameterized quantum circuit
+        self.circuit = ParameterizedCircuit(num_qubits=num_qubits)
+        
+        # Encoding layer
+        for i in range(num_qubits):
+            self.circuit.ry_param(i, f'input_{i}')
+        
+        # Variational layers
+        for layer in range(3):
+            # Entangling layer
+            for i in range(num_qubits-1):
+                self.circuit.cx(i, i+1)
+            
+            # Rotation layer
+            for i in range(num_qubits):
+                self.circuit.ry_param(i, f'w{layer}_{i}')
+        
+        # Quantum layer
+        input_params = [f'input_{i}' for i in range(num_qubits)]
+        weight_params = [f'w{l}_{i}' for l in range(3) for i in range(num_qubits)]
+        
+        self.quantum = QuantumLayer(
+            circuit=self.circuit,
+            input_params=input_params,
+            weight_params=weight_params
+        )
+        
+        # Classical output layer
+        self.fc = Linear(num_qubits, num_classes)
+    
+    def forward(self, x):
+        x = self.quantum(x)
+        x = self.fc(x)
+        return x
+
+# Training
+model = QuantumClassifier(num_qubits=4, num_classes=2)
+optimizer = Adam(model.parameters(), lr=0.01)
+criterion = nx.nn.CrossEntropyLoss()
+
+for epoch in range(100):
+    for X_batch, y_batch in dataloader:
+        # Forward pass
+        outputs = model(X_batch)
+        loss = criterion(outputs, y_batch)
+        
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    
+    print(f"Epoch {epoch}: Loss = {loss.item():.4f}")
+```
+
+## Example: Quantum GAN
+
+```python
+from neurenix.quantum import ParameterizedCircuit, QuantumLayer
+
+class QuantumGenerator(Module):
+    def __init__(self, latent_dim=4):
+        super().__init__()
+        
+        circuit = ParameterizedCircuit(num_qubits=latent_dim)
+        # Define generator circuit architecture
+        for i in range(latent_dim):
+            circuit.ry_param(i, f'z_{i}')
+        
+        self.quantum = QuantumLayer(circuit, ...)
+    
+    def forward(self, z):
+        return self.quantum(z)
+
+class QuantumDiscriminator(Module):
+    def __init__(self, input_dim=4):
+        super().__init__()
+        
+        circuit = ParameterizedCircuit(num_qubits=input_dim)
+        # Define discriminator circuit
+        self.quantum = QuantumLayer(circuit, ...)
+        self.fc = Linear(input_dim, 1)
+    
+    def forward(self, x):
+        x = self.quantum(x)
+        return self.fc(x).sigmoid()
+```
+
+## Best Practices
+
+1. **Circuit Depth**: Keep circuits shallow to minimize decoherence effects
+2. **Parameterization**: Use efficient parameterization schemes (hardware-efficient ansatz)
+3. **Measurement**: Use sufficient shots for accurate expectation values
+4. **Classical Optimization**: Choose appropriate optimizers (Adam often works well)
+5. **Hybrid Design**: Combine quantum and classical layers strategically
+
+## Hardware Considerations
+
+```python
+# Run on real quantum hardware (requires IBM Q account)
+from qiskit import IBMQ
+
+IBMQ.load_account()
+provider = IBMQ.get_provider(hub='ibm-q')
+backend = provider.get_backend('ibmq_manila')
+
+# Use with Neurenix
+from neurenix.quantum import QiskitBackend
+
+qbackend = QiskitBackend(device=backend)
+results = qbackend.run(circuit, shots=1024)
+```
+
+## References
+
+- Nielsen & Chuang - "Quantum Computation and Quantum Information"
+- Schuld & Petruccione - "Supervised Learning with Quantum Computers"
+- Farhi et al. (2014) - "A Quantum Approximate Optimization Algorithm"
+- Peruzzo et al. (2014) - "A variational eigenvalue solver on a photonic quantum processor"
+
+## See Also
+
+- [Variational Algorithms](/guides/variational-quantum)
+- [Quantum Machine Learning](/guides/qml)
+- [Hybrid Models](/examples/hybrid-quantum-classical)

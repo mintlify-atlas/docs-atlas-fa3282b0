@@ -1,0 +1,432 @@
+---
+title: 'Neural Network Layers'
+description: 'Core neural network layer implementations'
+---
+
+## Overview
+
+Neurenix provides a comprehensive set of neural network layers for building deep learning models.
+
+## Linear Layer
+
+```python
+class Linear(Module):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        dtype: Optional[DType] = None,
+        device: Optional[Device] = None,
+    )
+```
+
+Linear transformation: `y = xW^T + b`
+
+### Parameters
+
+<ParamField path="in_features" type="int" required>
+  Size of each input sample.
+</ParamField>
+
+<ParamField path="out_features" type="int" required>
+  Size of each output sample.
+</ParamField>
+
+<ParamField path="bias" type="bool" default="True">
+  If True, adds a learnable bias to the output.
+</ParamField>
+
+<ParamField path="dtype" type="Optional[DType]">
+  Data type of the parameters.
+</ParamField>
+
+<ParamField path="device" type="Optional[Device]">
+  Device to store the parameters on.
+</ParamField>
+
+### Attributes
+
+- `weight`: Learnable weights of shape `(out_features, in_features)`
+- `bias`: Learnable bias of shape `(out_features,)` (if bias=True)
+
+### Example
+
+```python
+import neurenix as nx
+
+# Create a linear layer
+layer = nx.Linear(784, 128)
+
+# Forward pass
+x = nx.Tensor.randn((32, 784))
+output = layer(x)
+print(output.shape)  # (32, 128)
+
+# Without bias
+layer_no_bias = nx.Linear(128, 10, bias=False)
+```
+
+## Convolutional Layers
+
+### Conv1d
+
+```python
+class Conv1d(Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        padding: int = 0,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
+    )
+```
+
+1D convolution layer.
+
+<ParamField path="in_channels" type="int" required>
+  Number of input channels.
+</ParamField>
+
+<ParamField path="out_channels" type="int" required>
+  Number of output channels.
+</ParamField>
+
+<ParamField path="kernel_size" type="int" required>
+  Size of the convolving kernel.
+</ParamField>
+
+<ParamField path="stride" type="int" default="1">
+  Stride of the convolution.
+</ParamField>
+
+<ParamField path="padding" type="int" default="0">
+  Zero-padding added to both sides of the input.
+</ParamField>
+
+### Conv2d
+
+```python
+class Conv2d(Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        groups: int = 1,
+        bias: bool = True,
+    )
+```
+
+2D convolution layer for image processing.
+
+### Conv3d
+
+```python
+class Conv3d(Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int]] = 1,
+        padding: Union[int, Tuple[int, int, int]] = 0,
+        dilation: Union[int, Tuple[int, int, int]] = 1,
+        groups: int = 1,
+        bias: bool = True,
+    )
+```
+
+3D convolution layer for video or volumetric data.
+
+### Example
+
+```python
+# 2D convolution for images
+conv = nx.Conv2d(
+    in_channels=3,
+    out_channels=64,
+    kernel_size=3,
+    stride=1,
+    padding=1
+)
+
+# Input: batch of RGB images
+x = nx.Tensor.randn((32, 3, 224, 224))
+output = conv(x)
+print(output.shape)  # (32, 64, 224, 224)
+
+# 1D convolution for sequences
+conv1d = nx.Conv1d(
+    in_channels=100,
+    out_channels=256,
+    kernel_size=5,
+    stride=1
+)
+
+seq = nx.Tensor.randn((16, 100, 50))  # (batch, channels, length)
+output = conv1d(seq)
+print(output.shape)  # (16, 256, 46)
+```
+
+## Recurrent Layers
+
+### RNN
+
+```python
+class RNN(Module):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        nonlinearity: str = 'tanh',
+        bias: bool = True,
+        batch_first: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+    )
+```
+
+Vanilla recurrent neural network.
+
+### LSTM
+
+```python
+class LSTM(Module):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = True,
+        batch_first: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+    )
+```
+
+Long Short-Term Memory network.
+
+<ParamField path="input_size" type="int" required>
+  The number of expected features in the input.
+</ParamField>
+
+<ParamField path="hidden_size" type="int" required>
+  The number of features in the hidden state.
+</ParamField>
+
+<ParamField path="num_layers" type="int" default="1">
+  Number of recurrent layers.
+</ParamField>
+
+<ParamField path="batch_first" type="bool" default="False">
+  If True, input and output tensors are provided as (batch, seq, feature).
+</ParamField>
+
+<ParamField path="bidirectional" type="bool" default="False">
+  If True, becomes a bidirectional LSTM.
+</ParamField>
+
+### GRU
+
+```python
+class GRU(Module):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = True,
+        batch_first: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+    )
+```
+
+Gated Recurrent Unit.
+
+### Example
+
+```python
+# LSTM for sequence modeling
+lstm = nx.LSTM(
+    input_size=128,
+    hidden_size=256,
+    num_layers=2,
+    batch_first=True,
+    bidirectional=True
+)
+
+# Input: (batch, sequence_length, features)
+x = nx.Tensor.randn((32, 50, 128))
+output, (hidden, cell) = lstm(x)
+
+# output shape: (32, 50, 512) - 512 because bidirectional
+print(output.shape)
+
+# GRU for language modeling
+gru = nx.GRU(
+    input_size=300,  # word embedding dimension
+    hidden_size=512,
+    num_layers=3,
+    batch_first=True,
+    dropout=0.2
+)
+
+embeddings = nx.Tensor.randn((16, 100, 300))
+output, hidden = gru(embeddings)
+```
+
+## Pooling Layers
+
+### MaxPool2d
+
+```python
+class MaxPool2d(Module):
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Optional[Union[int, Tuple[int, int]]] = None,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+    )
+```
+
+Max pooling over a 2D input.
+
+<ParamField path="kernel_size" type="Union[int, Tuple[int, int]]" required>
+  Size of the pooling window.
+</ParamField>
+
+<ParamField path="stride" type="Optional[Union[int, Tuple[int, int]]]">
+  Stride of the pooling window. Default is kernel_size.
+</ParamField>
+
+### Example
+
+```python
+# Max pooling
+maxpool = nx.MaxPool2d(kernel_size=2, stride=2)
+
+x = nx.Tensor.randn((32, 64, 224, 224))
+output = maxpool(x)
+print(output.shape)  # (32, 64, 112, 112)
+```
+
+## Regularization Layers
+
+### Dropout
+
+```python
+class Dropout(Module):
+    def __init__(self, p: float = 0.5, inplace: bool = False)
+```
+
+Randomly zeroes elements during training.
+
+<ParamField path="p" type="float" default="0.5">
+  Probability of an element to be zeroed.
+</ParamField>
+
+<ParamField path="inplace" type="bool" default="False">
+  If True, will do this operation in-place.
+</ParamField>
+
+### Example
+
+```python
+dropout = nx.Dropout(p=0.5)
+
+model.train()  # Dropout active
+x = nx.Tensor.randn((32, 128))
+output = dropout(x)  # Some elements zeroed
+
+model.eval()  # Dropout inactive
+output = dropout(x)  # No elements zeroed
+```
+
+## Container Layers
+
+### Sequential
+
+```python
+class Sequential(Module):
+    def __init__(self, *args)
+```
+
+Sequential container for chaining layers.
+
+### Example
+
+```python
+# Build a simple CNN
+model = nx.Sequential(
+    nx.Conv2d(3, 64, kernel_size=3, padding=1),
+    nx.ReLU(),
+    nx.MaxPool2d(2),
+    nx.Conv2d(64, 128, kernel_size=3, padding=1),
+    nx.ReLU(),
+    nx.MaxPool2d(2),
+    nx.Linear(128 * 56 * 56, 10)
+)
+
+# Forward pass
+x = nx.Tensor.randn((1, 3, 224, 224))
+output = model(x)
+print(output.shape)  # (1, 10)
+```
+
+## Complete Example
+
+```python
+import neurenix as nx
+
+class ResNetBlock(nx.Module):
+    def __init__(self, channels):
+        super().__init__()
+        self.conv1 = nx.Conv2d(channels, channels, 3, padding=1)
+        self.conv2 = nx.Conv2d(channels, channels, 3, padding=1)
+        self.relu = nx.ReLU()
+    
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = out + residual
+        out = self.relu(out)
+        return out
+
+class MyNetwork(nx.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nx.Conv2d(3, 64, kernel_size=7, stride=2, padding=3)
+        self.pool = nx.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.res_blocks = nx.Sequential(
+            ResNetBlock(64),
+            ResNetBlock(64),
+            ResNetBlock(64)
+        )
+        self.fc = nx.Linear(64 * 56 * 56, 1000)
+        self.dropout = nx.Dropout(0.5)
+    
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.pool(x)
+        x = self.res_blocks(x)
+        x = x.reshape(x.shape[0], -1)
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
+
+model = MyNetwork()
+print(nx.utils.model_summary(model))
+```

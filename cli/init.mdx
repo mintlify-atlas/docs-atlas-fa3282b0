@@ -1,0 +1,213 @@
+---
+title: neurenix init
+description: Initialize a new Neurenix project with folder structure and configuration
+---
+
+The `init` command creates a new Neurenix project with a standard folder structure, configuration files, and an optional dataset.
+
+## Usage
+
+```bash
+neurenix init [options]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | `neurenix-project` | Name of the project directory to create |
+| `--template` | string | `basic` | Project template (`basic` or `advanced`) |
+| `--dataset` | string | None | Dataset to download (URL or registered name) |
+| `--force` | flag | false | Force overwrite if directory exists |
+
+## Templates
+
+### Basic Template
+
+The basic template creates a minimal project structure suitable for getting started quickly:
+
+```
+project-name/
+├── config.json
+├── train.py
+├── data/
+├── models/
+├── configs/
+└── logs/
+```
+
+**Configuration (`config.json`):**
+- MLP model with layers [128, 64, 10]
+- ReLU activation
+- Adam optimizer with learning rate 0.001
+- Batch size 32, 10 epochs
+- Auto device selection
+
+### Advanced Template
+
+The advanced template creates a comprehensive project structure for production-ready workflows:
+
+```
+project-name/
+├── config.json
+├── train.py
+├── data/
+│   ├── train/
+│   ├── val/
+│   └── test/
+├── models/
+├── configs/
+├── logs/
+├── scripts/
+├── notebooks/
+└── tests/
+```
+
+**Configuration (`config.json`):**
+- ResNet-18 model with pretrained weights
+- Adam optimizer with learning rate 0.0001
+- Cosine learning rate scheduler with warmup
+- Batch size 64, 20 epochs
+- Mixed precision training
+- Data augmentation enabled
+
+## Examples
+
+### Create a basic project
+
+```bash
+neurenix init --name my-first-project
+```
+
+```
+Neurenix project 'my-first-project' initialized successfully with basic template.
+```
+
+### Create an advanced project
+
+```bash
+neurenix init --name production-model --template advanced
+```
+
+```
+Neurenix project 'production-model' initialized successfully with advanced template.
+```
+
+### Initialize with a dataset
+
+```bash
+neurenix init --name image-classifier --template advanced --dataset cifar10
+```
+
+```
+Downloading dataset from cifar10...
+Saving dataset to image-classifier/data/dataset.csv...
+Dataset saved successfully.
+Neurenix project 'image-classifier' initialized successfully with advanced template.
+```
+
+### Overwrite existing directory
+
+```bash
+neurenix init --name existing-project --force
+```
+
+```
+Neurenix project 'existing-project' initialized successfully with basic template.
+```
+
+## Generated Files
+
+### config.json (Basic)
+
+```json
+{
+  "model": {
+    "type": "mlp",
+    "layers": [128, 64, 10],
+    "activation": "relu"
+  },
+  "training": {
+    "batch_size": 32,
+    "epochs": 10,
+    "learning_rate": 0.001,
+    "optimizer": "adam"
+  },
+  "hardware": {
+    "device": "auto",
+    "precision": "float32"
+  }
+}
+```
+
+### train.py (Basic)
+
+```python
+import neurenix
+from neurenix.nn import Module
+from neurenix.optim import Adam
+
+config = neurenix.load_config("config.json")
+
+train_data, val_data = neurenix.load_dataset("data/dataset.csv", split=0.8)
+
+model = neurenix.create_model(config["model"])
+
+optimizer = Adam(model.parameters(), lr=config["training"]["learning_rate"])
+neurenix.train(
+    model, 
+    train_data, 
+    val_data, 
+    optimizer=optimizer,
+    batch_size=config["training"]["batch_size"],
+    epochs=config["training"]["epochs"]
+)
+
+neurenix.save_model(model, "models/model.nrx")
+```
+
+## Error Handling
+
+### Directory already exists
+
+```bash
+neurenix init --name existing-directory
+```
+
+```
+Error: Directory 'existing-directory' already exists. Use --force to overwrite.
+```
+
+### Dataset download failure
+
+```bash
+neurenix init --name project --dataset invalid-url
+```
+
+```
+Warning: Failed to download dataset: [error details]
+Neurenix project 'project' initialized successfully with basic template.
+```
+
+## Next Steps
+
+After initializing your project:
+
+1. Navigate to the project directory:
+   ```bash
+   cd my-first-project
+   ```
+
+2. Customize the configuration in `config.json`
+
+3. Add your dataset to the `data/` directory
+
+4. Run the training script:
+   ```bash
+   neurenix run train.py
+   ```
+
+## See Also
+
+- [Run command](/cli/run) - Train models
+- [Dataset command](/cli/dataset) - Manage datasets

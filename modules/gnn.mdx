@@ -1,0 +1,374 @@
+---
+title: Graph Neural Networks (GNN)
+description: Graph Neural Networks for processing graph-structured data
+---
+
+# Graph Neural Networks
+
+The GNN module provides implementations of various graph neural network architectures for processing graph-structured data, enabling applications like molecular property prediction, social network analysis, and knowledge graph reasoning.
+
+## Overview
+
+Graph Neural Networks operate on graph-structured data by passing messages between nodes and aggregating information from neighbors. Neurenix provides efficient implementations of popular GNN layers and models.
+
+## Core Layers
+
+### GraphConv (GCN)
+
+Graph Convolutional Layer implementing the spectral graph convolution.
+
+```python
+from neurenix.gnn import GraphConv
+import neurenix as nx
+
+# Create a GCN layer
+layer = GraphConv(in_channels=16, out_channels=32, normalize=True)
+
+# Node features and edge indices
+x = nx.randn(100, 16)  # 100 nodes, 16 features each
+edge_index = nx.tensor([[0, 1, 2], [1, 2, 3]])  # Edge list
+
+# Forward pass
+out = layer(x, edge_index)
+print(out.shape)  # (100, 32)
+```
+
+**Parameters:**
+- `in_channels` (int): Size of input features
+- `out_channels` (int): Size of output features
+- `aggr` (str): Aggregation method ('add', 'mean', 'max')
+- `bias` (bool): Whether to use bias
+- `normalize` (bool): Whether to normalize by degree
+
+### GraphAttention (GAT)
+
+Graph Attention Layer with multi-head attention mechanism.
+
+```python
+from neurenix.gnn import GraphAttention
+
+# Create a GAT layer with 4 attention heads
+layer = GraphAttention(
+    in_channels=16,
+    out_channels=8,
+    heads=4,
+    dropout=0.6
+)
+
+out = layer(x, edge_index)
+print(out.shape)  # (100, 32) = 8 * 4 heads
+```
+
+**Parameters:**
+- `in_channels` (int): Size of input features
+- `out_channels` (int): Size of output features per head
+- `heads` (int): Number of attention heads
+- `negative_slope` (float): LeakyReLU slope
+- `dropout` (float): Dropout probability
+
+### GraphSAGE
+
+GraphSAGE layer for inductive learning on large graphs.
+
+```python
+from neurenix.gnn import GraphSage
+
+# Create a GraphSAGE layer
+layer = GraphSage(
+    in_channels=16,
+    out_channels=32,
+    aggr='mean',
+    normalize=True
+)
+
+out = layer(x, edge_index)
+```
+
+**Parameters:**
+- `in_channels` (int): Size of input features
+- `out_channels` (int): Size of output features
+- `aggr` (str): Aggregation method ('mean', 'max', 'add')
+- `normalize` (bool): Whether to L2-normalize output
+
+### EdgeConv
+
+Edge Convolutional Layer for learning edge features.
+
+```python
+from neurenix.gnn import EdgeConv
+from neurenix.nn import Sequential, Linear, ReLU
+
+# Define edge function
+nn = Sequential(
+    Linear(32, 64),
+    ReLU(),
+    Linear(64, 32)
+)
+
+layer = EdgeConv(nn, aggr='max')
+out = layer(x, edge_index)
+```
+
+### GINConv
+
+Graph Isomorphism Network layer for powerful graph representations.
+
+```python
+from neurenix.gnn import GINConv
+
+nn = Sequential(
+    Linear(16, 32),
+    ReLU(),
+    Linear(32, 32)
+)
+
+layer = GINConv(nn, eps=0.0, train_eps=True)
+out = layer(x, edge_index)
+```
+
+## Complete Models
+
+### GCN Model
+
+```python
+from neurenix.gnn import GCN
+
+# Create a 3-layer GCN
+model = GCN(
+    in_channels=16,
+    hidden_channels=64,
+    out_channels=7,
+    num_layers=3,
+    dropout=0.5
+)
+
+# Forward pass
+out = model(x, edge_index)
+```
+
+### GAT Model
+
+```python
+from neurenix.gnn import GAT
+
+model = GAT(
+    in_channels=16,
+    hidden_channels=8,
+    out_channels=7,
+    num_layers=2,
+    heads=8,
+    dropout=0.6
+)
+
+out = model(x, edge_index)
+```
+
+## Graph Pooling
+
+Pooling operations for graph-level predictions.
+
+### Global Pooling
+
+```python
+from neurenix.gnn import GlobalMeanPooling, GlobalMaxPooling, GlobalAddPooling
+
+# Mean pooling
+pool = GlobalMeanPooling()
+graph_embedding = pool(x, batch)  # Aggregate node features
+
+# Max pooling
+pool = GlobalMaxPooling()
+graph_embedding = pool(x, batch)
+```
+
+### Hierarchical Pooling
+
+```python
+from neurenix.gnn import TopKPooling, SAGPooling
+
+# Top-K pooling
+pool = TopKPooling(in_channels=64, ratio=0.5)
+x_pooled, edge_index_pooled, _, batch, _ = pool(x, edge_index, batch=batch)
+
+# Self-Attention Graph Pooling
+pool = SAGPooling(in_channels=64, ratio=0.5)
+x_pooled, edge_index_pooled, _, batch, _ = pool(x, edge_index, batch=batch)
+```
+
+## Data Handling
+
+### Graph Data Structure
+
+```python
+from neurenix.gnn import Graph
+
+# Create a graph
+graph = Graph(
+    x=node_features,
+    edge_index=edge_indices,
+    edge_attr=edge_features,
+    y=labels
+)
+
+# Access properties
+print(graph.num_nodes)  # Number of nodes
+print(graph.num_edges)  # Number of edges
+```
+
+### Graph Dataset
+
+```python
+from neurenix.gnn import GraphDataset, GraphDataLoader
+
+# Create a dataset
+dataset = GraphDataset(graph_list)
+
+# Create a dataloader
+loader = GraphDataLoader(dataset, batch_size=32, shuffle=True)
+
+for batch in loader:
+    out = model(batch.x, batch.edge_index)
+    loss = criterion(out, batch.y)
+```
+
+## Utilities
+
+### Graph Utilities
+
+```python
+from neurenix.gnn.utils import (
+    add_self_loops,
+    remove_self_loops,
+    to_adjacency_matrix,
+    normalize_adjacency
+)
+
+# Add self-loops to edges
+edge_index, edge_attr = add_self_loops(edge_index, edge_attr, num_nodes=100)
+
+# Convert to adjacency matrix
+adj_matrix = to_adjacency_matrix(edge_index, num_nodes=100)
+
+# Normalize adjacency matrix
+adj_normalized = normalize_adjacency(adj_matrix)
+```
+
+## Example: Node Classification
+
+```python
+import neurenix as nx
+from neurenix.gnn import GCN
+from neurenix.nn import CrossEntropyLoss
+from neurenix.optim import Adam
+
+# Load graph data
+x = nx.randn(2708, 1433)  # Cora dataset
+y = nx.randint(0, 7, (2708,))
+edge_index = nx.tensor([[0, 1, 2], [1, 2, 0]])  # Edge list
+
+# Create model
+model = GCN(
+    in_channels=1433,
+    hidden_channels=16,
+    out_channels=7,
+    num_layers=2,
+    dropout=0.5
+)
+
+# Training
+optimizer = Adam(model.parameters(), lr=0.01)
+criterion = CrossEntropyLoss()
+
+for epoch in range(200):
+    model.train()
+    optimizer.zero_grad()
+    
+    out = model(x, edge_index)
+    loss = criterion(out[train_mask], y[train_mask])
+    
+    loss.backward()
+    optimizer.step()
+    
+    if epoch % 20 == 0:
+        print(f'Epoch {epoch}, Loss: {loss.item():.4f}')
+```
+
+## Example: Graph Classification
+
+```python
+from neurenix.gnn import GIN, GlobalAddPooling
+from neurenix.nn import Sequential, Linear, ReLU
+
+# Create GIN model for graph classification
+class GraphClassifier(nx.nn.Module):
+    def __init__(self):
+        super().__init__()
+        nn1 = Sequential(Linear(32, 64), ReLU(), Linear(64, 64))
+        nn2 = Sequential(Linear(64, 64), ReLU(), Linear(64, 64))
+        
+        self.conv1 = GINConv(nn1)
+        self.conv2 = GINConv(nn2)
+        self.pool = GlobalAddPooling()
+        self.classifier = Linear(64, 10)
+    
+    def forward(self, x, edge_index, batch):
+        x = self.conv1(x, edge_index).relu()
+        x = self.conv2(x, edge_index).relu()
+        x = self.pool(x, batch)
+        return self.classifier(x)
+
+model = GraphClassifier()
+```
+
+## Advanced Features
+
+### Relational GCN
+
+For knowledge graphs with multiple edge types:
+
+```python
+from neurenix.gnn import RelationalGraphConv
+
+layer = RelationalGraphConv(
+    in_channels=16,
+    out_channels=32,
+    num_relations=5,  # Number of edge types
+    aggr='mean'
+)
+
+out = layer(x, edge_index, edge_type)
+```
+
+### Gated Graph Convolution
+
+```python
+from neurenix.gnn import GatedGraphConv
+
+layer = GatedGraphConv(
+    out_channels=64,
+    num_layers=3  # Number of recurrent steps
+)
+
+out = layer(x, edge_index)
+```
+
+## Best Practices
+
+1. **Normalization**: Use `normalize=True` in GraphConv for better gradient flow
+2. **Dropout**: Apply dropout between layers to prevent overfitting
+3. **Attention Heads**: Use 4-8 heads in GAT for optimal performance
+4. **Pooling**: Choose appropriate pooling for your task (global for graph-level, hierarchical for interpretability)
+5. **Batching**: Use `GraphDataLoader` for efficient mini-batch training
+
+## References
+
+- **GCN**: Kipf & Welling (2017) - "Semi-Supervised Classification with Graph Convolutional Networks"
+- **GAT**: Veličković et al. (2018) - "Graph Attention Networks"
+- **GraphSAGE**: Hamilton et al. (2017) - "Inductive Representation Learning on Large Graphs"
+- **GIN**: Xu et al. (2019) - "How Powerful are Graph Neural Networks?"
+
+## See Also
+
+- [Neural Networks](/modules/neural-networks)
+- [Training Guide](/guides/training)
+- [API Reference](/api/gnn)

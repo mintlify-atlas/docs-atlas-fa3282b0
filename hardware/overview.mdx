@@ -1,0 +1,272 @@
+---
+title: Hardware Acceleration Overview
+description: Comprehensive hardware acceleration support in Neurenix AI framework
+---
+
+## Overview
+
+Neurenix provides extensive hardware acceleration support across multiple device types, enabling optimal performance for AI workloads on diverse hardware platforms. The framework automatically detects available hardware and provides a unified API for device management.
+
+## Supported Hardware
+
+Neurenix supports the following hardware acceleration platforms:
+
+<CardGroup cols={2}>
+  <Card title="CUDA" icon="nvidia" href="/hardware/cuda">
+    NVIDIA GPU acceleration with Tensor Cores support
+  </Card>
+  <Card title="ROCm" icon="microchip" href="/hardware/rocm">
+    AMD GPU acceleration via HIP/ROCm
+  </Card>
+  <Card title="ARM" icon="cpu" href="/hardware/arm">
+    ARM processors with NEON, SVE, and Ethos-U
+  </Card>
+  <Card title="FPGA" icon="chip" href="/hardware/fpga">
+    FPGA acceleration with OpenCL, Vitis, OpenVINO
+  </Card>
+  <Card title="NPU" icon="microchip" href="/hardware/npu">
+    Neural Processing Units for edge devices
+  </Card>
+  <Card title="CPU" icon="server">
+    Optimized CPU operations with SIMD
+  </Card>
+</CardGroup>
+
+## Device Management
+
+### Device Types
+
+The framework supports multiple device types through the `Device` class:
+
+```python
+from neurenix import Device
+
+# Create device instances
+cpu = Device.cpu()           # CPU device
+cuda = Device.cuda(0)        # CUDA device 0
+rocm = Device.rocm(0)        # ROCm device 0
+arm = Device.arm(0)          # ARM device 0
+npu = Device.npu(0)          # NPU device 0
+```
+
+```cpp
+// C++ device management
+#include <phynexus/tensor.h>
+
+using namespace phynexus;
+
+// Pre-defined device instances
+auto cpu = Device::CPU;
+auto cuda0 = Device::CUDA0;
+auto rocm0 = Device::ROCM0;
+auto arm0 = Device::ARM0;
+auto npu0 = Device::NPU0;
+
+// Factory methods
+auto cuda1 = Device::cuda(1);
+auto rocm1 = Device::rocm(1);
+```
+
+### Device Detection
+
+Automatically detect available hardware:
+
+```python
+import neurenix as nx
+
+# Check device availability
+if nx.cuda.is_available():
+    print(f"CUDA devices: {nx.cuda.device_count()}")
+
+if nx.rocm.is_available():
+    print(f"ROCm devices: {nx.rocm.device_count()}")
+
+if nx.arm.is_available():
+    print(f"ARM accelerators: {nx.arm.device_count()}")
+
+# Get all available devices
+devices = Device.get_all_devices()
+for device in devices:
+    print(f"Device: {device.to_string()}")
+```
+
+### Device Properties
+
+Query device capabilities and properties:
+
+```python
+device = Device.cuda(0)
+props = device.get_properties()
+
+print(f"Name: {props.name}")
+print(f"Memory: {props.total_memory / (1024**3):.2f} GB")
+print(f"Compute Capability: {props.compute_capability_major}.{props.compute_capability_minor}")
+print(f"Multi-processors: {props.multi_processor_count}")
+```
+
+```cpp
+// C++ device properties
+auto device = Device::cuda(0);
+auto props = device.get_properties();
+
+std::cout << "Name: " << props.name << std::endl;
+std::cout << "Memory: " << props.total_memory / (1024*1024*1024) << " GB" << std::endl;
+std::cout << "Compute Capability: " << props.compute_capability_major 
+          << "." << props.compute_capability_minor << std::endl;
+```
+
+### Setting Current Device
+
+Set the active device for operations:
+
+```python
+# Set CUDA device 1 as current
+device = Device.cuda(1)
+device.set_current()
+
+# All subsequent operations use this device
+tensor = nx.randn(1000, 1000)  # Created on cuda:1
+```
+
+```cpp
+// C++ device switching
+auto device = Device::cuda(1);
+device.set_current();
+
+// Create tensors on the current device
+auto tensor = randn({1000, 1000});
+```
+
+## Device Selection Strategy
+
+Neurenix automatically selects the best available device based on:
+
+1. **Explicit specification** - User-specified device takes precedence
+2. **GPU availability** - CUDA/ROCm GPUs preferred for large workloads
+3. **Specialized hardware** - NPUs for edge inference, FPGAs for specific workloads
+4. **CPU fallback** - Always available as fallback
+
+```python
+# Automatic device selection
+device = nx.get_default_device()  # Best available device
+
+# Manual device selection
+nx.set_default_device(Device.cuda(0))
+```
+
+## Memory Management
+
+### Unified Memory API
+
+Neurenix provides a unified memory API across all device types:
+
+```python
+# Allocate memory on device
+tensor = nx.empty((1000, 1000), device=Device.cuda(0))
+
+# Copy between devices
+tensor_cpu = tensor.to(Device.cpu())
+tensor_rocm = tensor.to(Device.rocm(0))
+
+# In-place copy
+tensor.copy_(other_tensor)
+```
+
+### Memory Transfer
+
+Efficient data transfer between host and device:
+
+```python
+import numpy as np
+
+# NumPy to device
+data = np.random.randn(100, 100)
+tensor = nx.from_numpy(data, device=Device.cuda(0))
+
+# Device to NumPy
+data_back = tensor.cpu().numpy()
+```
+
+## Performance Optimization
+
+### Device Synchronization
+
+```python
+# Synchronize device operations
+nx.cuda.synchronize()  # Wait for all CUDA operations
+nx.rocm.synchronize()  # Wait for all ROCm operations
+```
+
+### Stream Management
+
+```python
+# Create compute streams for parallel execution
+stream1 = nx.cuda.Stream()
+stream2 = nx.cuda.Stream()
+
+with stream1:
+    result1 = model1(input1)
+
+with stream2:
+    result2 = model2(input2)
+
+# Synchronize streams
+stream1.synchronize()
+stream2.synchronize()
+```
+
+## Device-Specific Features
+
+Each hardware platform provides specialized features:
+
+- **CUDA**: Tensor Cores, TensorRT optimization, cuDNN acceleration
+- **ROCm**: MIOpen, rocBLAS, mixed precision training
+- **ARM**: NEON SIMD, SVE vectorization, Arm Compute Library
+- **FPGA**: Custom bitstreams, OpenCL kernels, Vitis HLS
+- **NPU**: Quantized inference, model compilation, power efficiency
+
+See individual hardware pages for detailed documentation.
+
+## Cross-Platform Compatibility
+
+Write once, run anywhere:
+
+```python
+class MyModel(nx.Module):
+    def forward(self, x):
+        return x @ self.weight + self.bias
+
+# Same code works on any device
+for device in [Device.cpu(), Device.cuda(0), Device.rocm(0)]:
+    if device.is_available():
+        model = MyModel().to(device)
+        output = model(input.to(device))
+```
+
+## Environment Variables
+
+Control hardware behavior via environment variables:
+
+```bash
+# CUDA settings
+export CUDA_VISIBLE_DEVICES=0,1
+export NEURENIX_CUDA_ALLOW_TF32=1
+
+# ROCm settings
+export HIP_VISIBLE_DEVICES=0
+export NEURENIX_ROCM_ENABLE_MIOPEN=1
+
+# ARM settings
+export NEURENIX_ARM_NUM_THREADS=4
+
+# NPU settings
+export NPU_DEVICE_COUNT=1
+```
+
+## See Also
+
+- [CUDA Support](/hardware/cuda) - NVIDIA GPU acceleration
+- [ROCm Support](/hardware/rocm) - AMD GPU acceleration
+- [ARM Acceleration](/hardware/arm) - ARM processors
+- [FPGA Support](/hardware/fpga) - FPGA acceleration
+- [NPU Support](/hardware/npu) - Neural Processing Units

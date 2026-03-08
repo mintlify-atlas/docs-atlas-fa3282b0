@@ -1,0 +1,396 @@
+---
+title: Single Agent
+description: Create and customize individual agents in Neurenix for reinforcement learning and autonomous behavior
+---
+
+# Single Agent
+
+The `Agent` class is the foundation for building intelligent agents in Neurenix. It provides a flexible base class that you can extend to create custom agents for reinforcement learning, autonomous behavior, and more.
+
+## Agent Class
+
+The `Agent` class is defined in `neurenix/agent/agent.py` and provides the core interface for all agents.
+
+### Constructor
+
+```python
+from neurenix.agent import Agent
+
+agent = Agent(name="my-agent")
+```
+
+**Parameters:**
+- `name` (str, optional): The name of the agent. If not provided, a random name is generated (e.g., `Agent-a1b2c3d4`)
+
+### Properties
+
+#### name
+
+Get the name of the agent.
+
+```python
+print(agent.name)  # "my-agent"
+```
+
+**Returns:** `str` - The agent's name
+
+## Core Methods
+
+### act(observation)
+
+Choose an action based on the current observation. This method must be implemented by subclasses.
+
+```python
+class MyAgent(Agent):
+    def act(self, observation):
+        # Your action selection logic
+        return action
+
+observation = env.observe(agent)
+action = agent.act(observation)
+```
+
+**Parameters:**
+- `observation` (Any): The current observation of the environment
+
+**Returns:** Any - The action to take
+
+**Raises:** `NotImplementedError` if not overridden in subclass
+
+### learn(experience)
+
+Learn from experience. This method should be implemented by subclasses that support learning.
+
+```python
+class LearningAgent(Agent):
+    def learn(self, experience):
+        state, action, reward, next_state = experience
+        # Your learning algorithm
+        self.update_policy(state, action, reward, next_state)
+
+experience = (state, action, reward, next_state)
+agent.learn(experience)
+```
+
+**Parameters:**
+- `experience` (Any): The experience to learn from (format depends on your implementation)
+
+**Returns:** None
+
+**Raises:** `NotImplementedError` if not overridden in subclass
+
+### reset()
+
+Reset the agent's internal state. This is typically called at the beginning of a new episode.
+
+```python
+agent.reset()
+```
+
+**Returns:** None
+
+### save(path)
+
+Save the agent's state to a file. This method should be implemented by subclasses.
+
+```python
+class PersistentAgent(Agent):
+    def save(self, path):
+        # Save agent state, weights, etc.
+        torch.save(self.policy.state_dict(), path)
+
+agent.save("agent_checkpoint.pt")
+```
+
+**Parameters:**
+- `path` (str): The file path to save the agent to
+
+**Returns:** None
+
+**Raises:** `NotImplementedError` if not overridden in subclass
+
+### load(path)
+
+Load the agent's state from a file. This method should be implemented by subclasses.
+
+```python
+class PersistentAgent(Agent):
+    def load(self, path):
+        # Load agent state, weights, etc.
+        self.policy.load_state_dict(torch.load(path))
+
+agent.load("agent_checkpoint.pt")
+```
+
+**Parameters:**
+- `path` (str): The file path to load the agent from
+
+**Returns:** None
+
+**Raises:** `NotImplementedError` if not overridden in subclass
+
+## Creating Custom Agents
+
+### Basic Agent
+
+Create a simple agent by extending the `Agent` class:
+
+```python
+from neurenix.agent import Agent
+
+class SimpleAgent(Agent):
+    def __init__(self, name=None):
+        super().__init__(name)
+        self.action_space = [0, 1, 2, 3]  # Example: 4 possible actions
+    
+    def act(self, observation):
+        # Simple random action selection
+        import random
+        return random.choice(self.action_space)
+    
+    def learn(self, experience):
+        # No learning in this simple agent
+        pass
+
+# Use the agent
+agent = SimpleAgent("simple-agent")
+action = agent.act(observation)
+```
+
+### Reinforcement Learning Agent
+
+Create an RL agent with a neural network policy:
+
+```python
+from neurenix.agent import Agent
+from neurenix.nn import Sequential, Linear, ReLU
+from neurenix.tensor import Tensor
+import numpy as np
+
+class RLAgent(Agent):
+    def __init__(self, state_dim, action_dim, name=None):
+        super().__init__(name)
+        
+        # Policy network
+        self.policy = Sequential(
+            Linear(state_dim, 128),
+            ReLU(),
+            Linear(128, 64),
+            ReLU(),
+            Linear(64, action_dim)
+        )
+        
+        # Value network
+        self.value = Sequential(
+            Linear(state_dim, 128),
+            ReLU(),
+            Linear(128, 1)
+        )
+        
+        self.gamma = 0.99  # Discount factor
+    
+    def act(self, observation):
+        # Convert observation to tensor
+        state = Tensor(observation)
+        
+        # Get action probabilities from policy
+        action_logits = self.policy.forward(state)
+        
+        # Sample action
+        action_probs = self._softmax(action_logits.data)
+        action = np.random.choice(len(action_probs), p=action_probs)
+        
+        return action
+    
+    def learn(self, experience):
+        state, action, reward, next_state, done = experience
+        
+        # Compute TD error
+        state_tensor = Tensor(state)
+        next_state_tensor = Tensor(next_state)
+        
+        current_value = self.value.forward(state_tensor)
+        next_value = self.value.forward(next_state_tensor)
+        
+        td_target = reward + self.gamma * next_value.data * (1 - done)
+        td_error = td_target - current_value.data
+        
+        # Update policy and value networks
+        # (simplified - in practice, use proper gradient computation)
+        self._update_networks(td_error, state, action)
+    
+    def _softmax(self, x):
+        exp_x = np.exp(x - np.max(x))
+        return exp_x / exp_x.sum()
+    
+    def _update_networks(self, td_error, state, action):
+        # Implement policy gradient update
+        pass
+    
+    def save(self, path):
+        # Save policy and value network weights
+        checkpoint = {
+            "policy": self.policy.state_dict(),
+            "value": self.value.state_dict()
+        }
+        # Save checkpoint to file
+        pass
+    
+    def load(self, path):
+        # Load policy and value network weights
+        pass
+
+# Create and use the agent
+agent = RLAgent(state_dim=4, action_dim=2, name="rl-agent")
+
+# Training loop
+for episode in range(1000):
+    state = env.reset()
+    agent.reset()
+    
+    while True:
+        action = agent.act(state)
+        next_state, reward, done, info = env.step({agent.name: action})
+        
+        experience = (state, action, reward, next_state, done)
+        agent.learn(experience)
+        
+        state = next_state
+        if done:
+            break
+```
+
+### Goal-Oriented Agent
+
+Create an agent with specific goals:
+
+```python
+from neurenix.agent import Agent
+
+class GoalAgent(Agent):
+    def __init__(self, goal, name=None):
+        super().__init__(name)
+        self.goal = goal
+        self.plan = []
+    
+    def act(self, observation):
+        # Plan or re-plan if necessary
+        if not self.plan or self._needs_replan(observation):
+            self.plan = self._create_plan(observation, self.goal)
+        
+        # Execute next action in plan
+        if self.plan:
+            return self.plan.pop(0)
+        return None
+    
+    def learn(self, experience):
+        # Update world model or planning strategy
+        state, action, reward, next_state = experience
+        self._update_world_model(state, action, next_state)
+    
+    def _needs_replan(self, observation):
+        # Check if current plan is still valid
+        return False
+    
+    def _create_plan(self, start_state, goal):
+        # Create a plan to reach goal from start_state
+        # This could use A*, RRT, or other planning algorithms
+        return []
+    
+    def _update_world_model(self, state, action, next_state):
+        # Update internal model of how the world works
+        pass
+
+# Use the agent
+agent = GoalAgent(goal={"position": [10, 10]}, name="goal-agent")
+```
+
+## Best Practices
+
+### 1. Always Call Super Constructor
+
+When creating custom agents, always call the parent constructor:
+
+```python
+class MyAgent(Agent):
+    def __init__(self, custom_param, name=None):
+        super().__init__(name)  # Important!
+        self.custom_param = custom_param
+```
+
+### 2. Use State Dictionary
+
+The agent has an internal `_state` dictionary you can use to store episode-specific state:
+
+```python
+class StatefulAgent(Agent):
+    def act(self, observation):
+        # Access internal state
+        if "step_count" not in self._state:
+            self._state["step_count"] = 0
+        
+        self._state["step_count"] += 1
+        return self._select_action(observation)
+```
+
+### 3. Implement Save/Load for Training
+
+If you're training agents, implement save and load methods:
+
+```python
+import pickle
+
+class TrainableAgent(Agent):
+    def save(self, path):
+        checkpoint = {
+            "name": self._name,
+            "policy_weights": self.policy.get_weights(),
+            "metadata": self.metadata
+        }
+        with open(path, "wb") as f:
+            pickle.dump(checkpoint, f)
+    
+    def load(self, path):
+        with open(path, "rb") as f:
+            checkpoint = pickle.load(f)
+        self.policy.set_weights(checkpoint["policy_weights"])
+```
+
+### 4. Reset Agent State
+
+Always reset your agent's internal state when `reset()` is called:
+
+```python
+class EpisodicAgent(Agent):
+    def reset(self):
+        super().reset()  # Clears self._state
+        # Reset any additional agent-specific state
+        self.episode_buffer = []
+        self.episode_reward = 0
+```
+
+## API Reference
+
+### Agent
+
+**Source:** `neurenix/agent/agent.py:10`
+
+```python
+class Agent:
+    def __init__(self, name: Optional[str] = None)
+    
+    @property
+    def name(self) -> str
+    
+    def act(self, observation: Any) -> Any
+    def learn(self, experience: Any) -> None
+    def reset(self) -> None
+    def save(self, path: str) -> None
+    def load(self, path: str) -> None
+```
+
+## See Also
+
+- [Multi-Agent Systems](/agents/multi-agent) - Coordinate multiple agents
+- [Environments](/agents/environments) - Create environments for agents
+- [Agents Overview](/agents/overview) - Agent system overview

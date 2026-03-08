@@ -1,0 +1,219 @@
+---
+title: Introduction to Neurenix
+description: Learn about Neurenix, the AI framework optimized for Edge AI, multi-agent systems, and distributed computing
+---
+
+# Introduction to Neurenix
+
+Neurenix is an artificial intelligence framework optimized for embedded devices (Edge AI), with support for multiple GPUs and distributed clusters. The framework specializes in AI agents, with native support for multi-agent systems, reinforcement learning, and autonomous AI.
+
+<Note>
+Neurenix is designed to empower intelligent futures, one edge at a time. It brings state-of-the-art AI capabilities to resource-constrained environments without sacrificing performance.
+</Note>
+
+## What Makes Neurenix Different?
+
+Neurenix stands out in the AI framework landscape through several key innovations:
+
+<CardGroup cols={2}>
+  <Card title="Edge-First Design" icon="microchip">
+    Optimized for embedded devices and edge computing, making AI accessible on resource-constrained hardware
+  </Card>
+  
+  <Card title="Hot-Swappable Backends" icon="arrows-rotate">
+    Runtime device switching with automatic hardware detection through the Genesis system
+  </Card>
+  
+  <Card title="Multi-Agent Native" icon="users">
+    Built-in support for multi-agent systems, reinforcement learning, and autonomous agents
+  </Card>
+  
+  <Card title="Universal Hardware" icon="server">
+    Support for CPU, CUDA, ROCm, WebGPU, TPU, NPU, Vulkan, OpenCL, oneAPI, DirectML, TensorRT, ARM, and more
+  </Card>
+</CardGroup>
+
+## Core Features
+
+### Hardware Acceleration
+
+Neurenix provides comprehensive hardware acceleration support across diverse platforms:
+
+- **GPU Backends**: CUDA, ROCm, WebGPU, Vulkan, OpenCL, DirectML
+- **AI Accelerators**: TPU, NPU, Tensor Cores, GraphCore IPU, FPGA
+- **Optimized Libraries**: oneDNN, MKL-DNN, TensorRT
+- **ARM Architecture**: Compute Library, Ethos-U/NPU, Neon SIMD, SVE
+- **WebAssembly**: SIMD and WASI-NN for browser-based execution
+
+### AI Capabilities
+
+<Steps>
+  <Step title="Agent-Based AI">
+    Native support for single and multi-agent systems with reactive, deliberative, and hybrid architectures. Includes communication protocols, coordination mechanisms, and multi-agent learning algorithms.
+  </Step>
+  
+  <Step title="Advanced Learning">
+    Meta-learning (MAML, Reptile, Prototypical Networks), transfer learning, continual learning, federated learning, and zero-shot learning capabilities.
+  </Step>
+  
+  <Step title="Neuro-Symbolic AI">
+    Hybrid models combining neural networks with symbolic reasoning, differentiable logic, and knowledge distillation.
+  </Step>
+  
+  <Step title="Specialized Networks">
+    Graph Neural Networks (GNN), fuzzy logic systems, multi-scale architectures, and quantum computing integration.
+  </Step>
+</Steps>
+
+### Model Optimization
+
+Neurenix includes powerful optimization capabilities:
+
+```python
+from neurenix import Tensor, Device, DeviceType
+from neurenix.quantization import quantize_model, QuantizationConfig
+
+# Automatic quantization support
+config = QuantizationConfig(
+    precision="int8",  # INT8, FP16, or FP8
+    calibration_data=calibration_set,
+    pruning_enabled=True
+)
+
+quantized_model = quantize_model(model, config)
+```
+
+<Note>
+Quantization can reduce model size by up to 4x while maintaining accuracy, making deployment on edge devices feasible.
+</Note>
+
+### AutoML & Neural Architecture Search
+
+- Hyperparameter search (Grid, Random, Bayesian, Evolutionary)
+- Neural architecture search (NAS) for automated model design
+- Model selection and pipeline optimization
+- Neuroevolution with NEAT, HyperNEAT, and CMA-ES
+
+### Distributed Training
+
+Scale your training across multiple nodes and devices:
+
+- **MPI** for high-performance computing clusters
+- **Horovod** for distributed deep learning
+- **DeepSpeed** for large-scale model training
+- **Asynchronous training** with automatic checkpointing and resume
+
+### Production-Ready Features
+
+<CardGroup cols={2}>
+  <Card title="Model Serving" icon="globe">
+    RESTful, WebSocket, and gRPC APIs for serving models in production
+  </Card>
+  
+  <Card title="ONNX Support" icon="exchange">
+    Import/export models to ONNX for interoperability with other frameworks
+  </Card>
+  
+  <Card title="Explainability" icon="magnifying-glass">
+    SHAP, LIME, feature importance, and activation visualization
+  </Card>
+  
+  <Card title="Containerization" icon="docker">
+    Docker and Kubernetes support for cloud-native deployments
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+Neurenix is built on a layered architecture that separates concerns and enables flexibility:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   High-Level APIs                       │
+│  (Agents, AutoML, Federated Learning, Quantum, etc.)   │
+└─────────────────────────────────────────────────────────┘
+                          |
+┌─────────────────────────────────────────────────────────┐
+│                  Neural Network Layer                   │
+│        (Module, Linear, Conv2d, LSTM, etc.)            │
+└─────────────────────────────────────────────────────────┘
+                          |
+┌─────────────────────────────────────────────────────────┐
+│                    Tensor Operations                    │
+│         (Tensor, automatic differentiation)            │
+└─────────────────────────────────────────────────────────┘
+                          |
+┌─────────────────────────────────────────────────────────┐
+│                   Device Abstraction                    │
+│          (DeviceManager, Genesis system)               │
+└─────────────────────────────────────────────────────────┘
+                          |
+┌─────────────────────────────────────────────────────────┐
+│                  Hardware Backends                      │
+│  (CUDA, ROCm, Vulkan, TPU, NPU, WebGPU, etc.)         │
+└─────────────────────────────────────────────────────────┘
+                          |
+┌─────────────────────────────────────────────────────────┐
+│                    Phynexus Engine                      │
+│        (Rust/C++/Go optimized core operations)         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+**Tensor System**: The foundation of Neurenix, providing n-dimensional arrays with automatic differentiation and device-agnostic operations.
+
+**Device Management**: Hot-swappable backend functionality with runtime device switching. The Genesis system automatically detects and selects optimal hardware.
+
+**Neural Network Modules**: Composable building blocks for creating models, including Linear, Conv2d, LSTM, and more specialized layers.
+
+**Agent Framework**: Complete infrastructure for building autonomous agents, including environments, policies, value functions, and multi-agent coordination.
+
+**Optimization**: Advanced optimizers (SGD, Adam, etc.) with support for distributed training and gradient accumulation.
+
+## Use Cases
+
+Neurenix excels in scenarios requiring:
+
+<Steps>
+  <Step title="Edge AI Deployment">
+    Deploy models on IoT devices, embedded systems, and edge servers with minimal resource footprint
+  </Step>
+  
+  <Step title="Multi-Agent Systems">
+    Build collaborative AI systems for robotics, game AI, autonomous vehicles, and swarm intelligence
+  </Step>
+  
+  <Step title="Heterogeneous Computing">
+    Leverage diverse hardware accelerators in a single application with automatic device selection
+  </Step>
+  
+  <Step title="Research & Experimentation">
+    Explore cutting-edge AI techniques like neuro-symbolic learning, quantum ML, and meta-learning
+  </Step>
+</Steps>
+
+## Community & Support
+
+Join the Neurenix community:
+
+- [Discord](https://discord.gg/Eqnhr8tK2G) - Get help and discuss with other users
+- [GitHub](https://github.com/MilesONerd/neurenix) - Report issues and contribute
+- [Bluesky](https://bsky.app/profile/neurenix.bsky.social) - Follow updates
+- [Documentation](https://neurenix.readthedocs.io/) - Comprehensive guides
+
+<Warning>
+Neurenix is currently in **Alpha** stage (v2.0.1). APIs may change between versions. Use in production with caution.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get Neurenix installed on your system
+  </Card>
+  
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build your first model in 5 minutes
+  </Card>
+</CardGroup>

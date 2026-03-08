@@ -1,80 +1,493 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Build your first AI model with Neurenix in 5 minutes
 ---
 
-## Get started in three steps
+# Quickstart Guide
 
-Get your documentation site running locally and make your first customization.
+Get started with Neurenix by building a simple neural network in just a few minutes. This guide will walk you through creating, training, and using a model.
 
-### Step 1: Set up your local environment
+<Note>
+Make sure you have [installed Neurenix](/installation) before proceeding with this guide.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Your First Neural Network
+
+Let's create a simple feedforward neural network for classification:
+
+```python
+import neurenix as nx
+from neurenix import Tensor
+from neurenix.nn import Sequential, Linear, ReLU, Softmax
+from neurenix.optim import Adam
+
+# Initialize Neurenix
+nx.init()
+
+print(f"Neurenix v{nx.version()} - Ready to build AI!")
+```
+
+### Building the Model
+
+<Steps>
+  <Step title="Define the Architecture">
+    Create a sequential model with linear layers and activation functions
+  </Step>
+  
+  <Step title="Initialize the Optimizer">
+    Set up the Adam optimizer with a learning rate
+  </Step>
+  
+  <Step title="Train on Data">
+    Feed data through the model and update weights
+  </Step>
+  
+  <Step title="Make Predictions">
+    Use the trained model for inference
+  </Step>
+</Steps>
+
+```python
+# Create a simple 3-layer neural network
+model = Sequential([
+    Linear(784, 256),    # Input layer: 784 features (e.g., 28x28 images)
+    ReLU(),              # Activation function
+    Linear(256, 128),    # Hidden layer
+    ReLU(),
+    Linear(128, 10),     # Output layer: 10 classes
+    Softmax(dim=1)       # Softmax for classification
+])
+
+print("Model architecture created successfully!")
+print(f"Total parameters: {sum(p.size for p in model.parameters())}")
+```
+
+### Training the Model
+
+```python
+import numpy as np
+
+# Create optimizer
+optimizer = Adam(model.parameters(), lr=0.001)
+
+# Generate dummy training data (replace with your dataset)
+num_samples = 1000
+X_train = np.random.randn(num_samples, 784).astype(np.float32)
+y_train = np.random.randint(0, 10, size=(num_samples,))
+
+# Convert labels to one-hot encoding
+y_onehot = np.zeros((num_samples, 10), dtype=np.float32)
+y_onehot[np.arange(num_samples), y_train] = 1.0
+
+# Training loop
+epochs = 10
+batch_size = 32
+
+print("\nStarting training...")
+
+for epoch in range(epochs):
+    total_loss = 0.0
+    num_batches = 0
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    # Iterate over mini-batches
+    for i in range(0, num_samples, batch_size):
+        # Get batch
+        batch_X = X_train[i:i+batch_size]
+        batch_y = y_onehot[i:i+batch_size]
+        
+        # Convert to tensors
+        inputs = Tensor(batch_X)
+        targets = Tensor(batch_y)
+        
+        # Forward pass
+        outputs = model(inputs)
+        
+        # Compute loss (cross-entropy)
+        loss = -((targets * outputs.log()).sum(dim=1).mean())
+        
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        
+        # Update weights
+        optimizer.step()
+        
+        total_loss += loss.item()
+        num_batches += 1
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    avg_loss = total_loss / num_batches
+    print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
 
-### Step 2: Deploy your changes
+print("\nTraining completed!")
+```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+### Making Predictions
+
+```python
+# Make predictions on new data
+test_input = np.random.randn(1, 784).astype(np.float32)
+test_tensor = Tensor(test_input)
+
+# Get prediction
+prediction = model(test_tensor)
+predicted_class = prediction.argmax(dim=1).item()
+
+print(f"\nPredicted class: {predicted_class}")
+print(f"Confidence: {prediction[0][predicted_class].item():.4f}")
+```
+
+## Building an AI Agent
+
+Neurenix specializes in agent-based AI. Here's how to create a simple reinforcement learning agent:
+
+```python
+import neurenix as nx
+from neurenix.agent import Agent, Environment
+from neurenix.nn import Sequential, Linear, ReLU
+
+# Create a custom agent
+class SimpleAgent(Agent):
+    def __init__(self, state_dim, action_dim, name="SimpleAgent"):
+        super().__init__(name=name)
+        
+        # Create a simple policy network
+        self.policy = Sequential([
+            Linear(state_dim, 64),
+            ReLU(),
+            Linear(64, action_dim)
+        ])
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    def act(self, observation):
+        """Choose an action based on observation"""
+        obs_tensor = nx.Tensor(observation)
+        action_logits = self.policy(obs_tensor)
+        
+        # Choose action with highest value
+        action = action_logits.argmax(dim=-1).item()
+        return action
+    
+    def learn(self, experience):
+        """Learn from experience (state, action, reward, next_state)"""
+        # Implement learning logic here
+        pass
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+# Create an agent
+agent = SimpleAgent(state_dim=4, action_dim=2, name="MyFirstAgent")
+print(f"\nAgent created: {agent.name}")
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+# Simulate agent interaction
+state = [0.1, 0.2, -0.1, 0.5]  # Example state
+action = agent.act(state)
+print(f"Agent action: {action}")
+```
 
-### Step 3: Go live
+<Note>
+For real reinforcement learning environments, install the optional agents package: `pip install neurenix[agents]`
+</Note>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Using Hardware Acceleration
 
-## Next steps
+Neurenix automatically detects and uses available hardware:
 
-Now that you have your docs running, explore these key features:
+<CodeGroup>
+```python CPU (Default)
+import neurenix as nx
+from neurenix import Device, DeviceType
+
+# Use CPU
+device = Device(DeviceType.CPU)
+nx.init({"device": "cpu"})
+
+print("Running on CPU")
+```
+
+```python CUDA (NVIDIA GPU)
+import neurenix as nx
+from neurenix import Device, DeviceType
+from neurenix.binding import is_cuda_available
+
+# Check CUDA availability
+if is_cuda_available():
+    device = Device(DeviceType.CUDA, index=0)
+    nx.init({"device": "cuda"})
+    print("Running on CUDA GPU")
+else:
+    print("CUDA not available")
+```
+
+```python TPU (Google Cloud)
+import neurenix as nx
+from neurenix import Device, DeviceType
+from neurenix.binding import is_tpu_available
+
+# Check TPU availability
+if is_tpu_available():
+    device = Device(DeviceType.TPU)
+    nx.init({"device": "tpu"})
+    print("Running on TPU")
+else:
+    print("TPU not available")
+```
+
+```python WebGPU (Browser)
+import neurenix as nx
+from neurenix import Device, DeviceType
+
+# Use WebGPU for browser-based execution
+device = Device(DeviceType.WEBGPU)
+nx.init({"device": "webgpu"})
+
+print("Running on WebGPU in browser")
+```
+</CodeGroup>
+
+### Hot-Swapping Devices
+
+One of Neurenix's unique features is runtime device switching:
+
+```python
+from neurenix.device_manager import DeviceManager
+from neurenix import Tensor
+
+# Create device manager
+manager = DeviceManager()
+
+# Create tensor on CPU
+tensor = Tensor([1, 2, 3, 4])
+print(f"Original device: CPU")
+
+# Move to GPU (if available)
+tensor_gpu = manager.to_device(tensor, "cuda")
+print(f"Moved to: CUDA")
+
+# Move back to CPU
+tensor_cpu = manager.to_device(tensor_gpu, "cpu")
+print(f"Moved back to: CPU")
+```
+
+## Working with Datasets
+
+Neurenix provides DatasetHub for easy dataset loading:
+
+```python
+from neurenix.data import DatasetHub, DatasetFormat
+
+# Create dataset hub
+hub = DatasetHub()
+
+# Load a dataset from URL
+iris_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+iris_dataset = hub.load_dataset(iris_url, format=DatasetFormat.CSV)
+
+print(f"Loaded {len(iris_dataset)} samples")
+print(f"First sample: {iris_dataset[0]}")
+
+# Split into train/validation
+train_dataset, val_dataset = iris_dataset.split(ratio=0.8, shuffle=True, seed=42)
+
+print(f"Training samples: {len(train_dataset)}")
+print(f"Validation samples: {len(val_dataset)}")
+
+# Convert to tensors
+import neurenix as nx
+train_array = train_dataset.to_tensor(framework="numpy")
+train_tensor = nx.Tensor(train_array)
+
+print(f"Tensor shape: {train_tensor.shape}")
+```
+
+## Model Quantization
+
+Optimize your models for edge deployment:
+
+```python
+from neurenix.quantization import quantize_model, QuantizationConfig
+
+# Create quantization configuration
+config = QuantizationConfig(
+    precision="int8",              # INT8, FP16, or FP8
+    quantization_aware=False,      # Post-training quantization
+    pruning_enabled=True,          # Enable model pruning
+    pruning_ratio=0.3              # Prune 30% of weights
+)
+
+# Quantize the model
+quantized_model = quantize_model(model, config)
+
+print("Model quantized successfully!")
+print(f"Size reduction: ~4x smaller")
+print(f"Speed improvement: ~2-3x faster on CPU")
+```
+
+<Warning>
+Quantization may slightly reduce model accuracy. Always validate performance after quantization.
+</Warning>
+
+## Model Export & Serving
+
+Export your model to ONNX for deployment:
+
+```python
+from neurenix.onnx_support import ONNXConverter
+
+# Create converter
+converter = ONNXConverter()
+
+# Export to ONNX
+input_shape = (1, 784)
+converter.export(
+    model=model,
+    output_path="model.onnx",
+    input_shape=input_shape,
+    opset_version=13
+)
+
+print("Model exported to ONNX format")
+```
+
+Serve the model with the built-in API server:
+
+```python
+from neurenix.api_support import serve_model, ServerType
+
+# Serve model via REST API
+serve_model(
+    model=model,
+    server_type=ServerType.REST,
+    host="0.0.0.0",
+    port=8080,
+    endpoint="/predict"
+)
+
+print("Model serving at http://localhost:8080/predict")
+```
+
+<Note>
+The API server supports REST, WebSocket, and gRPC protocols for flexible deployment options.
+</Note>
+
+## Using the CLI
+
+Neurenix includes a powerful command-line interface:
+
+```bash
+# Check available hardware
+neurenix hardware
+
+# Initialize a new project
+neurenix init my_project
+
+# Train a model from config
+neurenix run config.yaml
+
+# Export model to ONNX
+neurenix export model.pt --format onnx --output model.onnx
+
+# Serve a model
+neurenix serve model.onnx --port 8080
+
+# Monitor training
+neurenix monitor training_logs.json
+
+# Optimize model
+neurenix optimize model.pt --precision int8
+```
+
+## Example: Complete Training Script
+
+Here's a complete example combining everything:
+
+```python
+import neurenix as nx
+import numpy as np
+from neurenix import Tensor
+from neurenix.nn import Sequential, Linear, ReLU, Softmax
+from neurenix.optim import Adam
+from neurenix.data import DatasetHub
+
+def main():
+    # Initialize framework
+    nx.init({"device": "cpu", "log_level": "info"})
+    print(f"Neurenix v{nx.__version__}")
+    
+    # Define model
+    model = Sequential([
+        Linear(4, 64),
+        ReLU(),
+        Linear(64, 32),
+        ReLU(),
+        Linear(32, 3),
+        Softmax(dim=1)
+    ])
+    
+    # Create optimizer
+    optimizer = Adam(model.parameters(), lr=0.001)
+    
+    # Load dataset
+    hub = DatasetHub()
+    iris_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+    dataset = hub.load_dataset(iris_url, format="csv")
+    
+    # Split data
+    train_data, val_data = dataset.split(ratio=0.8, shuffle=True)
+    
+    # Training loop
+    epochs = 50
+    for epoch in range(epochs):
+        # Training phase
+        model.train()
+        train_loss = 0.0
+        
+        for batch in train_data.batch(32):
+            X, y = batch[:, :4], batch[:, 4]
+            
+            inputs = Tensor(X)
+            targets = Tensor(y)
+            
+            outputs = model(inputs)
+            loss = -((targets * outputs.log()).sum(dim=1).mean())
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            train_loss += loss.item()
+        
+        if (epoch + 1) % 10 == 0:
+            print(f"Epoch {epoch+1}/{epochs} - Loss: {train_loss:.4f}")
+    
+    print("\nTraining completed!")
+    
+    # Save model
+    model.save("iris_model.pt")
+    print("Model saved to iris_model.pt")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Next Steps
+
+Now that you've built your first model, explore more advanced features:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="API Reference" icon="book" href="/api/tensor">
+    Explore the complete API documentation
+  </Card>
+  
+  <Card title="Advanced Training" icon="graduation-cap" href="/advanced/distributed-training">
+    Learn about distributed training and optimization
+  </Card>
+  
+  <Card title="Agent Systems" icon="users" href="/agents/overview">
+    Build multi-agent reinforcement learning systems
+  </Card>
+  
+  <Card title="Model Deployment" icon="server" href="/deployment/onnx">
+    Deploy models to production environments
+  </Card>
 </CardGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+All code examples in this guide use real Neurenix APIs from version 2.0.1. For the latest updates, check the [GitHub repository](https://github.com/MilesONerd/neurenix).
 </Note>

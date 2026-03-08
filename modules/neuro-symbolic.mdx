@@ -1,0 +1,541 @@
+---
+title: Neuro-Symbolic AI
+description: Integration of neural networks with symbolic reasoning
+---
+
+# Neuro-Symbolic AI
+
+The neuro-symbolic module bridges neural networks with symbolic reasoning systems, combining the learning capabilities of deep learning with the interpretability and logical reasoning of symbolic AI. This enables systems that can learn from data while respecting logical constraints and providing explainable decisions.
+
+## Overview
+
+Neuro-symbolic AI combines:
+- **Neural Networks**: Pattern recognition and learning from data
+- **Symbolic Reasoning**: Logical inference and knowledge representation
+- **Differentiable Logic**: End-to-end trainable logical operations
+- **Knowledge Integration**: Incorporating domain knowledge into learning
+
+## Core Components
+
+### Symbolic Knowledge Base
+
+```python
+from neurenix.neuro_symbolic import SymbolicKnowledgeBase, LogicProgram
+
+# Create knowledge base
+kb = SymbolicKnowledgeBase()
+
+# Add facts
+kb.add_fact("bird(tweety)")
+kb.add_fact("bird(woody)")
+kb.add_fact("penguin(opus)")
+
+# Add rules
+kb.add_rule("flies(X) :- bird(X), not penguin(X)")
+kb.add_rule("swims(X) :- penguin(X)")
+
+# Query
+results = kb.query("flies(X)")
+print(results)  # [{'X': 'tweety'}, {'X': 'woody'}]
+```
+
+### Logic Program
+
+```python
+from neurenix.neuro_symbolic import LogicProgram, RuleSet
+
+# Define logic program
+program = LogicProgram()
+
+# Add rules with confidence weights
+program.add_rule(
+    "parent(X, Y) :- father(X, Y)",
+    weight=1.0
+)
+
+program.add_rule(
+    "parent(X, Y) :- mother(X, Y)",
+    weight=1.0
+)
+
+program.add_rule(
+    "ancestor(X, Z) :- parent(X, Y), ancestor(Y, Z)",
+    weight=0.9
+)
+
+program.add_rule(
+    "ancestor(X, Y) :- parent(X, Y)",
+    weight=1.0
+)
+
+# Forward chaining
+program.infer_all()
+```
+
+## Neural-Symbolic Models
+
+### Basic Integration
+
+```python
+from neurenix.neuro_symbolic import NeuralSymbolicModel
+from neurenix.nn import Module, Linear
+import neurenix as nx
+
+class HybridClassifier(Module):
+    def __init__(self, kb: SymbolicKnowledgeBase):
+        super().__init__()
+        
+        # Neural component
+        self.neural = nx.nn.Sequential(
+            Linear(784, 256),
+            nx.nn.ReLU(),
+            Linear(256, 128),
+            nx.nn.ReLU(),
+            Linear(128, 10)
+        )
+        
+        # Symbolic component
+        self.symbolic = kb
+    
+    def forward(self, x):
+        # Neural prediction
+        neural_output = self.neural(x)
+        
+        # Apply symbolic constraints
+        constrained_output = self.apply_constraints(
+            neural_output,
+            self.symbolic
+        )
+        
+        return constrained_output
+    
+    def apply_constraints(self, predictions, kb):
+        # Enforce logical constraints on predictions
+        for i, pred in enumerate(predictions):
+            # Check consistency with knowledge base
+            if kb.query(f"not valid_class({i})"):
+                predictions[i] = 0.0
+        
+        return predictions.softmax(dim=-1)
+```
+
+### Differentiable Logic
+
+Make logical operations differentiable for end-to-end training.
+
+```python
+from neurenix.neuro_symbolic import DifferentiableLogic, LogicTensor
+import neurenix as nx
+
+# Create differentiable logic operators
+logic = DifferentiableLogic()
+
+# Logical AND
+x = nx.tensor([0.8, 0.9, 0.3])
+y = nx.tensor([0.7, 0.6, 0.9])
+result = logic.and_op(x, y)  # Element-wise fuzzy AND
+print(result)  # [0.7, 0.6, 0.3]
+
+# Logical OR
+result = logic.or_op(x, y)
+print(result)  # [0.8, 0.9, 0.9]
+
+# Logical NOT
+result = logic.not_op(x)
+print(result)  # [0.2, 0.1, 0.7]
+
+# Implication
+result = logic.implies(x, y)
+print(result)  # [0.7, 0.6, 1.0]
+```
+
+### Logic Tensor Networks
+
+```python
+from neurenix.neuro_symbolic import LogicTensor
+
+class LogicTensorNetwork(Module):
+    def __init__(self):
+        super().__init__()
+        
+        self.feature_extractor = nx.nn.Sequential(
+            Linear(784, 256),
+            nx.nn.ReLU(),
+            Linear(256, 64)
+        )
+        
+        self.predicate_networks = nx.nn.ModuleDict({
+            'is_digit': Linear(64, 1),
+            'is_even': Linear(64, 1),
+            'is_prime': Linear(64, 1)
+        })
+        
+        self.logic = DifferentiableLogic()
+    
+    def forward(self, x):
+        # Extract features
+        features = self.feature_extractor(x)
+        
+        # Compute predicates
+        is_digit = self.predicate_networks['is_digit'](features).sigmoid()
+        is_even = self.predicate_networks['is_even'](features).sigmoid()
+        is_prime = self.predicate_networks['is_prime'](features).sigmoid()
+        
+        # Apply logical constraints
+        # If prime, then not even (except for 2)
+        constraint1 = self.logic.implies(
+            is_prime,
+            self.logic.not_op(is_even)
+        )
+        
+        return is_digit, is_even, is_prime, constraint1
+```
+
+## Reasoning Methods
+
+### Deductive Reasoning
+
+```python
+from neurenix.neuro_symbolic import DeductiveReasoning
+
+reasoner = DeductiveReasoning(kb)
+
+# Apply modus ponens
+# Given: P -> Q and P, infer Q
+result = reasoner.modus_ponens(
+    premise="bird(X)",
+    rule="flies(X) :- bird(X)"
+)
+print(result)  # flies(X) for all X where bird(X)
+```
+
+### Abductive Reasoning
+
+Infer the most likely explanation.
+
+```python
+from neurenix.neuro_symbolic import AbductiveReasoning
+
+reasoner = AbductiveReasoning(kb)
+
+# Observe: grass is wet
+# Explain: rain or sprinkler?
+explanations = reasoner.abduce(
+    observation="wet(grass)",
+    possible_causes=["rain", "sprinkler"]
+)
+print(explanations)  # Ranked explanations with probabilities
+```
+
+### Inductive Reasoning
+
+Learn rules from examples.
+
+```python
+from neurenix.neuro_symbolic import InductiveReasoning
+
+reasoner = InductiveReasoning()
+
+# Learn rules from examples
+examples = [
+    ("parent(john, mary)", "parent(mary, susan)", "ancestor(john, susan)"),
+    ("parent(bob, alice)", "parent(alice, charlie)", "ancestor(bob, charlie)")
+]
+
+learned_rules = reasoner.induce(examples)
+print(learned_rules)
+# ancestor(X, Z) :- parent(X, Y), parent(Y, Z)
+```
+
+## Knowledge Distillation
+
+Extract symbolic rules from neural networks.
+
+```python
+from neurenix.neuro_symbolic import RuleExtraction, SymbolicDistillation
+
+# Train a neural network
+neural_model = train_neural_network(X_train, y_train)
+
+# Extract symbolic rules
+extractor = RuleExtraction(neural_model)
+rules = extractor.extract_rules(
+    X_train,
+    min_confidence=0.8,
+    min_support=0.1
+)
+
+print("Extracted Rules:")
+for rule in rules:
+    print(f"{rule.condition} => {rule.conclusion} (conf: {rule.confidence:.2f})")
+
+# Create symbolic model from rules
+symbolic_model = extractor.to_symbolic_model(rules)
+
+# Verify equivalence
+accuracy_neural = evaluate(neural_model, X_test, y_test)
+accuracy_symbolic = evaluate(symbolic_model, X_test, y_test)
+print(f"Neural: {accuracy_neural:.2f}, Symbolic: {accuracy_symbolic:.2f}")
+```
+
+## Constraint Satisfaction
+
+```python
+from neurenix.neuro_symbolic import ConstraintSatisfaction
+import neurenix as nx
+
+class ConstrainedModel(Module):
+    def __init__(self):
+        super().__init__()
+        self.model = nx.nn.Sequential(
+            Linear(10, 32),
+            nx.nn.ReLU(),
+            Linear(32, 5)
+        )
+        self.constraints = ConstraintSatisfaction()
+    
+    def forward(self, x):
+        output = self.model(x)
+        
+        # Define constraints
+        # Constraint 1: Sum of outputs = 1
+        self.constraints.add_constraint(
+            lambda out: (out.sum(dim=-1) - 1.0).abs() < 0.01
+        )
+        
+        # Constraint 2: All outputs >= 0
+        self.constraints.add_constraint(
+            lambda out: (out >= 0).all()
+        )
+        
+        # Apply constraints
+        output = self.constraints.satisfy(output)
+        
+        return output
+```
+
+## Example: Visual Question Answering
+
+```python
+import neurenix as nx
+from neurenix.neuro_symbolic import (
+    NeuralSymbolicModel,
+    SymbolicKnowledgeBase,
+    LogicProgram
+)
+
+class VQAModel(Module):
+    def __init__(self):
+        super().__init__()
+        
+        # Image encoder (neural)
+        self.image_encoder = nx.vision.resnet50(pretrained=True)
+        
+        # Question encoder (neural)
+        self.question_encoder = nx.nn.LSTM(
+            input_size=300,
+            hidden_size=512,
+            num_layers=2
+        )
+        
+        # Symbolic reasoning
+        self.kb = SymbolicKnowledgeBase()
+        self.kb.add_rule("color(X, Y) :- object(X), has_color(X, Y)")
+        self.kb.add_rule("shape(X, Y) :- object(X), has_shape(X, Y)")
+        self.kb.add_rule("count(X, N) :- object(X), count_objects(X, N)")
+        
+        # Answer decoder
+        self.answer_decoder = Linear(1024, 1000)  # 1000 possible answers
+    
+    def forward(self, image, question):
+        # Extract visual features
+        img_features = self.image_encoder(image)
+        
+        # Encode question
+        q_features, _ = self.question_encoder(question)
+        
+        # Parse question to logical query
+        query = self.parse_question(question)
+        
+        # Ground symbols in image
+        self.ground_symbols(img_features)
+        
+        # Symbolic reasoning
+        reasoning_result = self.kb.query(query)
+        
+        # Combine neural and symbolic
+        combined = nx.cat([img_features, q_features, reasoning_result], dim=-1)
+        
+        # Generate answer
+        answer = self.answer_decoder(combined)
+        
+        return answer
+    
+    def parse_question(self, question):
+        # Convert natural language to logical query
+        # "What color is the ball?" -> "color(ball, X)"
+        pass
+    
+    def ground_symbols(self, img_features):
+        # Detect objects and properties from image
+        # Add to knowledge base
+        pass
+
+model = VQAModel()
+```
+
+## Example: Scientific Discovery
+
+```python
+from neurenix.neuro_symbolic import (
+    InductiveReasoning,
+    LogicProgram,
+    SymbolicKnowledgeBase
+)
+
+class ScientificDiscovery(Module):
+    def __init__(self):
+        super().__init__()
+        
+        # Neural pattern detector
+        self.pattern_detector = nx.nn.Sequential(
+            Linear(100, 256),
+            nx.nn.ReLU(),
+            Linear(256, 64)
+        )
+        
+        # Symbolic hypothesis generator
+        self.hypothesis_generator = InductiveReasoning()
+        
+        # Knowledge base
+        self.kb = SymbolicKnowledgeBase()
+    
+    def discover(self, experimental_data):
+        # Extract patterns from data
+        patterns = self.pattern_detector(experimental_data)
+        
+        # Generate hypotheses
+        hypotheses = self.hypothesis_generator.induce(patterns)
+        
+        # Test hypotheses
+        validated_hypotheses = []
+        for h in hypotheses:
+            if self.validate_hypothesis(h, experimental_data):
+                validated_hypotheses.append(h)
+                self.kb.add_rule(h)
+        
+        return validated_hypotheses
+    
+    def validate_hypothesis(self, hypothesis, data):
+        # Statistical validation
+        predictions = self.kb.query_with_hypothesis(hypothesis, data)
+        return self.compute_significance(predictions, data)
+```
+
+## Example: Probabilistic Logic Programming
+
+```python
+from neurenix.neuro_symbolic import ProbabilisticLogic
+import neurenix as nx
+
+class ProbabilisticModel(Module):
+    def __init__(self):
+        super().__init__()
+        self.logic = ProbabilisticLogic()
+    
+    def forward(self, evidence):
+        # Define probabilistic rules
+        # P(disease | symptom1, symptom2)
+        
+        # Prior probabilities
+        p_disease = nx.tensor(0.01)
+        
+        # Conditional probabilities
+        p_symptom1_given_disease = nx.tensor(0.9)
+        p_symptom2_given_disease = nx.tensor(0.8)
+        
+        # Evidence
+        has_symptom1 = evidence['symptom1']
+        has_symptom2 = evidence['symptom2']
+        
+        # Bayesian inference
+        posterior = self.logic.bayes_rule(
+            prior=p_disease,
+            likelihood=[
+                p_symptom1_given_disease if has_symptom1 else (1 - p_symptom1_given_disease),
+                p_symptom2_given_disease if has_symptom2 else (1 - p_symptom2_given_disease)
+            ]
+        )
+        
+        return posterior
+```
+
+## Training with Logical Constraints
+
+```python
+from neurenix.neuro_symbolic import NeuralSymbolicLoss
+import neurenix as nx
+
+class ConstrainedTraining:
+    def __init__(self, model, kb):
+        self.model = model
+        self.kb = kb
+        self.criterion = nx.nn.CrossEntropyLoss()
+        self.constraint_loss = NeuralSymbolicLoss(kb)
+    
+    def train_step(self, X, y):
+        # Forward pass
+        outputs = self.model(X)
+        
+        # Data loss
+        data_loss = self.criterion(outputs, y)
+        
+        # Constraint violation loss
+        constraint_loss = self.constraint_loss(outputs, self.kb)
+        
+        # Combined loss
+        total_loss = data_loss + 0.5 * constraint_loss
+        
+        return total_loss
+
+# Training loop
+model = HybridClassifier(kb)
+optimizer = nx.optim.Adam(model.parameters(), lr=0.001)
+trainer = ConstrainedTraining(model, kb)
+
+for epoch in range(100):
+    for X_batch, y_batch in dataloader:
+        loss = trainer.train_step(X_batch, y_batch)
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+```
+
+## Best Practices
+
+1. **Balance**: Find the right balance between neural and symbolic components
+2. **Constraints**: Use soft constraints during training, hard constraints during inference
+3. **Interpretability**: Extract rules periodically to verify learned behavior
+4. **Knowledge Integration**: Start with domain knowledge, refine with data
+5. **Validation**: Validate logical consistency of neural outputs
+
+## Advantages
+
+- **Interpretability**: Explainable decisions through symbolic reasoning
+- **Data Efficiency**: Learn from fewer examples using prior knowledge
+- **Consistency**: Enforce logical constraints and domain rules
+- **Transfer**: Symbolic knowledge transfers across domains
+- **Reasoning**: Perform complex multi-step reasoning
+
+## References
+
+- Garcez et al. (2019) - "Neural-Symbolic Computing: An Effective Methodology for Principled Integration"
+- Serafini & Garcez (2016) - "Logic Tensor Networks: Deep Learning and Logical Reasoning"
+- Evans & Grefenstette (2018) - "Learning Explanatory Rules from Noisy Data"
+
+## See Also
+
+- [Explainability](/modules/explainability)
+- [Knowledge Graphs](/guides/knowledge-graphs)
+- [Logic Programming](/guides/logic-programming)

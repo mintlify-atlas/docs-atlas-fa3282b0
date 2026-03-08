@@ -1,0 +1,548 @@
+---
+title: NPU Support
+description: Neural Processing Unit acceleration for edge AI inference in Neurenix
+---
+
+## Overview
+
+Neurenix provides support for Neural Processing Units (NPUs), specialized hardware accelerators designed for efficient AI inference on edge devices. NPUs offer:
+
+- **Power efficiency** - Optimized for low-power operation
+- **Low latency** - Dedicated hardware for neural network operations
+- **Quantization support** - INT8/INT16 operations for efficiency
+- **Edge deployment** - Designed for mobile and embedded systems
+- **Real-time inference** - Deterministic performance for edge applications
+
+## Supported NPUs
+
+### Mobile NPUs
+- Apple Neural Engine (A-series, M-series)
+- Qualcomm Hexagon DSP/NPU (Snapdragon)
+- MediaTek APU (Dimensity)
+- Samsung NPU (Exynos)
+- Google Edge TPU
+
+### Embedded NPUs
+- ARM Ethos-U55, U65
+- Intel Movidius Myriad X
+- NVIDIA Deep Learning Accelerator (DLA)
+- Hailo-8, Hailo-15
+- Kneron KL series
+
+## Installation
+
+```bash
+# Install Neurenix with NPU support
+pip install neurenix-npu
+
+# Build from source
+export NEURENIX_WITH_NPU=1
+pip install -e .
+
+# Install vendor-specific SDK (example for Edge TPU)
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+sudo apt-get update
+sudo apt-get install libedgetpu1-std python3-pycoral
+```
+
+## Device Management
+
+### Check NPU Availability
+
+```python
+import neurenix as nx
+
+# Check NPU availability
+if nx.npu.is_available():
+    print("NPU is available")
+    print(f"NPU devices: {nx.npu.device_count()}")
+else:
+    print("NPU not available")
+```
+
+```cpp
+// C++ NPU detection
+#include "phynexus/hardware/npu.h"
+
+using namespace phynexus::hardware;
+
+if (initialize_npu()) {
+    int device_count = get_npu_device_count();
+    std::cout << "NPU devices: " << device_count << std::endl;
+}
+```
+
+### Get Device Properties
+
+```python
+# Get NPU properties
+props = nx.npu.get_device_properties(0)
+print(f"Device: {props.name}")
+print(f"Memory: {props.total_memory / (1024**2):.2f} MB")
+print(f"Supported operations: {props.supported_ops}")
+print(f"Max batch size: {props.max_batch_size}")
+print(f"Quantization support: {props.quantization_support}")
+```
+
+```cpp
+// C++ device properties
+auto props = get_npu_device_properties(0);
+std::cout << "Device: " << props.name << std::endl;
+std::cout << "Memory: " << props.total_memory / (1024*1024) << " MB" << std::endl;
+```
+
+### Set Current Device
+
+```python
+# Set NPU device
+nx.npu.set_device(0)
+
+# Get current device
+current = nx.npu.current_device()
+print(f"Current NPU: {current}")
+
+# Create tensors on NPU
+device = nx.Device.npu(0)
+tensor = nx.randn(100, 100, device=device)
+```
+
+## Model Compilation
+
+### Compile for NPU
+
+```python
+import neurenix as nx
+from neurenix.npu import compile_for_npu
+
+# Load model
+model = nx.load('model.pt')
+
+# Compile for NPU
+npu_model = compile_for_npu(
+    model,
+    input_shape=(1, 3, 224, 224),
+    quantization='int8',
+    optimization_level=3,
+    target_npu='auto'  # Auto-detect NPU
+)
+
+# Run inference on NPU
+input_tensor = nx.randn(1, 3, 224, 224)
+output = npu_model(input_tensor)
+```
+
+### Supported Operations
+
+```python
+# Check which operations are supported on NPU
+from neurenix.npu import get_supported_operations
+
+supported_ops = get_supported_operations()
+print("Supported operations:")
+for op in supported_ops:
+    print(f"  - {op}")
+
+# Check if specific operation is supported
+if 'conv2d' in supported_ops:
+    print("Convolution is supported")
+```
+
+## Quantization
+
+### Overview
+
+NPUs typically require quantized models for optimal performance:
+
+```python
+from neurenix.quantization import quantize_model
+
+# Quantize model for NPU
+quantized_model = quantize_model(
+    model,
+    calibration_data=calibration_loader,
+    quantization_scheme='int8',
+    target='npu'
+)
+
+# Compile quantized model for NPU
+npu_model = compile_for_npu(quantized_model, input_shape=(1, 3, 224, 224))
+```
+
+### Post-Training Quantization
+
+```python
+from neurenix.quantization import quantize_dynamic, quantize_static
+
+# Dynamic quantization (no calibration needed)
+dynamic_model = quantize_dynamic(
+    model,
+    dtype=nx.qint8,
+    target='npu'
+)
+
+# Static quantization (requires calibration)
+static_model = quantize_static(
+    model,
+    calibration_data=calibration_loader,
+    dtype=nx.qint8
+)
+```
+
+### Quantization-Aware Training
+
+```python
+from neurenix.quantization import QuantizationConfig, prepare_qat
+
+# Configure quantization
+qat_config = QuantizationConfig(
+    activation_dtype=nx.quint8,
+    weight_dtype=nx.qint8,
+    per_channel=True
+)
+
+# Prepare model for QAT
+qat_model = prepare_qat(model, qat_config)
+
+# Train with quantization
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        output = qat_model(batch)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+
+# Convert to quantized model
+quantized_model = qat_model.convert()
+```
+
+## Memory Management
+
+### Allocate Memory
+
+```python
+# Allocate tensor on NPU
+tensor = nx.zeros((100, 100), device='npu:0')
+
+# Check memory usage
+memory_info = nx.npu.memory_info()
+print(f"Used memory: {memory_info.used / (1024**2):.2f} MB")
+print(f"Free memory: {memory_info.free / (1024**2):.2f} MB")
+```
+
+```cpp
+// C++ NPU memory management
+void* ptr = npu_malloc(1024 * 1024 * sizeof(float));
+// ... use memory ...
+npu_free(ptr);
+```
+
+### Memory Transfer
+
+```python
+import numpy as np
+
+# Host to NPU
+data = np.random.randn(100, 100).astype(np.float32)
+tensor_npu = nx.from_numpy(data, device='npu')
+
+# NPU to host
+data_back = tensor_npu.cpu().numpy()
+
+# Asynchronous transfer
+stream = nx.npu.Stream()
+with stream:
+    tensor_npu = data_tensor.to('npu', non_blocking=True)
+```
+
+```cpp
+// C++ memory transfer
+float* host_data = new float[size];
+void* npu_data = npu_malloc(size * sizeof(float));
+
+// Host to NPU
+npu_memcpy_host_to_device(npu_data, host_data, size * sizeof(float));
+
+// NPU to host
+npu_memcpy_device_to_host(host_data, npu_data, size * sizeof(float));
+```
+
+## Edge TPU
+
+### Setup
+
+```python
+from neurenix.hardware import EdgeTPU
+
+# Initialize Edge TPU
+edge_tpu = EdgeTPU()
+edge_tpu.initialize()
+
+print(f"Edge TPU version: {edge_tpu.version()}")
+print(f"Available Edge TPUs: {edge_tpu.device_count()}")
+```
+
+### Compile Model
+
+```python
+# Compile model for Edge TPU
+from neurenix.edgetpu import compile_for_edgetpu
+
+tflite_model = 'model.tflite'
+edgetpu_model = compile_for_edgetpu(
+    tflite_model,
+    output_path='model_edgetpu.tflite'
+)
+
+# Load and run on Edge TPU
+model = EdgeTPU.load_model(edgetpu_model)
+output = model.predict(input_data)
+```
+
+## Apple Neural Engine
+
+### Core ML Conversion
+
+```python
+import neurenix as nx
+from neurenix.coreml import convert_to_coreml
+
+# Convert to Core ML
+model = nx.load('model.pt')
+coreml_model = convert_to_coreml(
+    model,
+    input_shape=(1, 3, 224, 224),
+    minimum_deployment_target='iOS15'
+)
+
+# Save Core ML model
+coreml_model.save('model.mlmodel')
+```
+
+### Neural Engine Optimization
+
+```python
+# Optimize for Neural Engine
+from neurenix.coreml import optimize_for_neural_engine
+
+optimized_model = optimize_for_neural_engine(
+    coreml_model,
+    compute_precision='float16'
+)
+```
+
+## Qualcomm Hexagon NPU
+
+### SNPE Integration
+
+```python
+from neurenix.snpe import compile_for_snpe
+
+# Compile for Snapdragon NPU
+snpe_model = compile_for_snpe(
+    model,
+    input_shape=(1, 3, 224, 224),
+    runtime='dsp',  # Use Hexagon DSP
+    quantization='int8'
+)
+
+# Export DLC (Deep Learning Container)
+snpe_model.export('model.dlc')
+```
+
+## Performance Optimization
+
+### Batch Processing
+
+```python
+# Process multiple inputs efficiently
+batch_inputs = [input1, input2, input3, input4]
+
+# Batch inference on NPU
+outputs = npu_model.batch_predict(batch_inputs)
+```
+
+### Model Optimization
+
+```python
+from neurenix.npu import optimize_model
+
+# Optimize model for NPU
+optimized_model = optimize_model(
+    model,
+    input_shape=(1, 3, 224, 224),
+    optimization_passes=[
+        'remove_unused_ops',
+        'fold_batch_norm',
+        'fuse_conv_bn',
+        'quantize_weights'
+    ]
+)
+```
+
+### Operator Fusion
+
+```python
+# Enable operator fusion
+npu_model = compile_for_npu(
+    model,
+    input_shape=(1, 3, 224, 224),
+    enable_fusion=True
+)
+```
+
+## Profiling and Debugging
+
+### NPU Profiling
+
+```python
+# Profile NPU operations
+with nx.npu.profiler.profile():
+    output = npu_model(input)
+
+# Get profiling results
+profile_data = nx.npu.profiler.get_profile_data()
+for op in profile_data:
+    print(f"{op.name}: {op.duration_ms:.2f} ms")
+```
+
+### Benchmark
+
+```python
+from neurenix.benchmark import benchmark_npu
+
+# Benchmark NPU inference
+results = benchmark_npu(
+    npu_model,
+    input_shape=(1, 3, 224, 224),
+    num_iterations=100,
+    warmup_iterations=10
+)
+
+print(f"Average latency: {results.mean_latency_ms:.2f} ms")
+print(f"Throughput: {results.throughput_fps:.2f} fps")
+print(f"Power consumption: {results.power_mw:.2f} mW")
+```
+
+## Deployment
+
+### Export Model
+
+```python
+# Export NPU model for deployment
+npu_model.export(
+    'model_npu.bin',
+    include_metadata=True,
+    optimize_size=True
+)
+```
+
+### Mobile Integration
+
+```python
+# Export for Android
+from neurenix.mobile import export_for_android
+
+export_for_android(
+    npu_model,
+    output_path='model_android.tflite',
+    use_npu=True
+)
+
+# Export for iOS
+from neurenix.mobile import export_for_ios
+
+export_for_ios(
+    npu_model,
+    output_path='model_ios.mlmodel',
+    use_neural_engine=True
+)
+```
+
+## Environment Variables
+
+```bash
+# NPU device selection
+export NPU_DEVICE_COUNT=1
+export NEURENIX_NPU_DEVICE=0
+
+# Enable NPU debugging
+export NEURENIX_NPU_DEBUG=1
+
+# Set performance mode
+export NEURENIX_NPU_PERFORMANCE_MODE=high  # high, balanced, low_power
+
+# Edge TPU
+export CORAL_VISIBLE_DEVICES=0
+```
+
+## Common Use Cases
+
+### Real-Time Object Detection
+
+```python
+import neurenix as nx
+from neurenix.models import detection
+
+# Load detection model
+model = detection.mobilenet_ssd(pretrained=True)
+
+# Compile for NPU
+npu_model = compile_for_npu(
+    model,
+    input_shape=(1, 3, 300, 300),
+    quantization='int8'
+)
+
+# Real-time inference
+import cv2
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    # Preprocess
+    input_tensor = preprocess(frame)
+    
+    # NPU inference
+    detections = npu_model(input_tensor)
+    
+    # Visualize
+    draw_detections(frame, detections)
+    cv2.imshow('Detection', frame)
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+```
+
+### Edge Classification
+
+```python
+# Load classification model
+from neurenix.models import mobilenet_v3_small
+
+model = mobilenet_v3_small(pretrained=True)
+model.eval()
+
+# Compile for NPU with quantization
+npu_model = compile_for_npu(
+    model,
+    input_shape=(1, 3, 224, 224),
+    quantization='int8',
+    calibration_data=calibration_loader
+)
+
+# Run inference
+with nx.no_grad():
+    output = npu_model(input_image)
+    prediction = output.argmax(dim=1)
+```
+
+## See Also
+
+- [ARM Acceleration](/hardware/arm) - ARM CPU and Ethos-U NPU
+- [Model Quantization](/optimization/quantization)
+- [Mobile Deployment](/deployment/mobile)
+- [Edge Deployment](/deployment/edge)

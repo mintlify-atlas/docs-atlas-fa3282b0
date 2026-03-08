@@ -1,0 +1,631 @@
+---
+title: 'Algorithms'
+description: 'Deep reinforcement learning algorithms in Neurenix'
+---
+
+## Overview
+
+Neurenix implements state-of-the-art deep reinforcement learning algorithms for both discrete and continuous control tasks. Each algorithm is optimized for specific problem types and learning scenarios.
+
+## Algorithm Comparison
+
+| Algorithm | Action Space | Policy Type | Key Feature |
+|-----------|--------------|-------------|-------------|
+| DQN | Discrete | Off-policy | Experience replay |
+| A2C | Both | On-policy | Advantage estimation |
+| PPO | Both | On-policy | Clipped policy updates |
+| DDPG | Continuous | Off-policy | Deterministic policy |
+| SAC | Continuous | Off-policy | Entropy regularization |
+
+## Deep Q-Network (DQN)
+
+DQN learns a Q-function to estimate state-action values for discrete action spaces.
+
+### Basic Usage
+
+```python
+from neurenix.rl import DQN
+
+# Define spaces
+observation_space = {
+    "type": "box",
+    "shape": (4,),
+    "dim": 4
+}
+
+action_space = {
+    "type": "discrete",
+    "n": 2
+}
+
+# Create DQN agent
+agent = DQN(
+    observation_space=observation_space,
+    action_space=action_space,
+    hidden_dims=[64, 64],
+    learning_rate=0.001,
+    gamma=0.99,
+    epsilon_start=1.0,
+    epsilon_end=0.01,
+    epsilon_decay=0.995,
+    buffer_size=10000,
+    batch_size=64,
+    update_target_every=100,
+    double_q=False,
+    dueling=False,
+    name="DQN"
+)
+
+# Train
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:19`
+
+### DQN Architecture
+
+The algorithm creates two networks:
+
+```python
+from neurenix.nn import Sequential, Linear, ReLU
+
+# Q-network
+q_network = Sequential(
+    Linear(input_dim, 64),
+    ReLU(),
+    Linear(64, 64),
+    ReLU(),
+    Linear(64, output_dim)
+)
+
+# Target network (for stability)
+target_network = q_network.clone()
+```
+
+**Source**: `neurenix/rl/agent.py:258`
+
+### Experience Replay
+
+DQN uses experience replay for efficient learning:
+
+```python
+# Store experience
+buffer.append((state, action, reward, next_state, done))
+
+# Sample batch
+indices = np.random.choice(len(buffer), batch_size, replace=False)
+batch = [buffer[i] for i in indices]
+
+# Unpack and convert to tensors
+states, actions, rewards, next_states, dones = zip(*batch)
+states = Tensor.stack(states)
+rewards = Tensor(rewards)
+next_states = Tensor.stack(next_states)
+dones = Tensor(dones)
+```
+
+**Source**: `neurenix/rl/agent.py:372`
+
+### Target Network Updates
+
+```python
+# Update target network periodically
+if steps % update_target_every == 0:
+    for target_param, param in zip(
+        target_network.parameters(),
+        q_network.parameters()
+    ):
+        target_param.data.copy_(param.data)
+```
+
+**Source**: `neurenix/rl/value.py:223`
+
+### Loss Function
+
+```python
+# Get current Q-values
+q_values = q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+
+# Compute target Q-values
+with Tensor.no_grad():
+    next_q_values = target_network(next_states).max(1)[0]
+    target_q_values = rewards + gamma * next_q_values * (1 - dones)
+
+# MSE loss
+loss = ((q_values - target_q_values) ** 2).mean()
+```
+
+**Source**: `neurenix/rl/value.py:188`
+
+### Variants
+
+#### Double DQN
+
+```python
+agent = DQN(
+    observation_space=obs_space,
+    action_space=action_space,
+    double_q=True  # Use Double DQN
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:40`
+
+#### Dueling DQN
+
+```python
+agent = DQN(
+    observation_space=obs_space,
+    action_space=action_space,
+    dueling=True  # Use Dueling DQN
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:41`
+
+## Advantage Actor-Critic (A2C)
+
+A2C learns both a policy (actor) and a value function (critic) using advantage estimation.
+
+### Basic Usage
+
+```python
+from neurenix.rl import A2C
+
+# Create A2C agent
+agent = A2C(
+    observation_space=observation_space,
+    action_space=action_space,
+    actor_hidden_dims=[64, 64],
+    critic_hidden_dims=[64, 64],
+    actor_learning_rate=0.0003,
+    critic_learning_rate=0.001,
+    gamma=0.99,
+    entropy_coef=0.01,      # Encourage exploration
+    value_coef=0.5,         # Value loss weight
+    max_grad_norm=0.5,      # Gradient clipping
+    name="A2C"
+)
+
+# Train
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:161`
+
+### Network Architecture
+
+```python
+from neurenix.nn import Sequential, Linear, ReLU, Tanh
+
+# Actor network (policy)
+actor = Sequential(
+    Linear(obs_dim, 64),
+    ReLU(),
+    Linear(64, 64),
+    ReLU(),
+    Linear(64, action_dim),
+    Tanh()  # For continuous actions
+)
+
+# Critic network (value function)
+critic = Sequential(
+    Linear(obs_dim, 64),
+    ReLU(),
+    Linear(64, 64),
+    ReLU(),
+    Linear(64, 1)  # Single value output
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:216`
+
+### Advantage Calculation
+
+```python
+# Value estimates
+value = critic(state)
+next_value = critic(next_state)
+
+# TD error as advantage
+advantage = reward + gamma * next_value * (1 - done) - value
+
+# Actor loss (policy gradient)
+actor_loss = -log_prob * advantage.detach()
+
+# Critic loss
+critic_loss = advantage ** 2
+
+# Total loss
+loss = actor_loss + value_coef * critic_loss - entropy_coef * entropy
+```
+
+### Discrete vs Continuous Actions
+
+#### Discrete Actions
+
+```python
+action_space = {"type": "discrete", "n": 4}
+
+agent = A2C(
+    observation_space=obs_space,
+    action_space=action_space
+)
+
+# Actor outputs logits for discrete actions
+logits = actor(state)
+action_probs = Tensor.softmax(logits, dim=-1)
+action = action_probs.sample()
+```
+
+**Source**: `neurenix/rl/algorithms.py:227`
+
+#### Continuous Actions
+
+```python
+action_space = {
+    "type": "box",
+    "shape": (2,),
+    "low": -1.0,
+    "high": 1.0
+}
+
+agent = A2C(
+    observation_space=obs_space,
+    action_space=action_space
+)
+
+# Actor outputs action mean (std is fixed or learned)
+mean = actor(state)
+action = mean + std * noise
+```
+
+**Source**: `neurenix/rl/algorithms.py:237`
+
+## Proximal Policy Optimization (PPO)
+
+PPO constrains policy updates to improve training stability.
+
+### Basic Usage
+
+```python
+from neurenix.rl import PPO
+
+agent = PPO(
+    observation_space=observation_space,
+    action_space=action_space,
+    actor_hidden_dims=[64, 64],
+    critic_hidden_dims=[64, 64],
+    actor_learning_rate=0.0003,
+    critic_learning_rate=0.001,
+    gamma=0.99,
+    gae_lambda=0.95,        # GAE parameter
+    clip_ratio=0.2,         # PPO clip parameter
+    target_kl=0.01,         # Target KL divergence
+    value_coef=0.5,
+    entropy_coef=0.01,
+    max_grad_norm=0.5,
+    name="PPO"
+)
+
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:367`
+
+### Clipped Surrogate Objective
+
+```python
+# Compute ratio of new and old policy
+ratio = new_log_prob.exp() / old_log_prob.exp()
+
+# Clipped objective
+clipped_ratio = ratio.clamp(1 - clip_ratio, 1 + clip_ratio)
+objective = torch.min(
+    ratio * advantages,
+    clipped_ratio * advantages
+)
+
+# Actor loss
+actor_loss = -objective.mean()
+```
+
+### Generalized Advantage Estimation (GAE)
+
+```python
+# Compute advantages using GAE
+advantages = []
+advantage = 0
+
+for t in reversed(range(len(rewards))):
+    delta = rewards[t] + gamma * values[t+1] * (1 - dones[t]) - values[t]
+    advantage = delta + gamma * gae_lambda * (1 - dones[t]) * advantage
+    advantages.insert(0, advantage)
+
+advantages = Tensor(advantages)
+```
+
+### Early Stopping
+
+```python
+# Stop optimization if KL divergence is too large
+kl_div = (old_log_prob - new_log_prob).mean()
+if kl_div > target_kl:
+    break
+```
+
+## Deep Deterministic Policy Gradient (DDPG)
+
+DDPG learns a deterministic policy for continuous control.
+
+### Basic Usage
+
+```python
+from neurenix.rl import DDPG
+
+agent = DDPG(
+    observation_space=observation_space,
+    action_space=action_space,
+    actor_hidden_dims=[64, 64],
+    critic_hidden_dims=[64, 64],
+    actor_learning_rate=0.001,
+    critic_learning_rate=0.001,
+    gamma=0.99,
+    tau=0.005,              # Soft target update rate
+    buffer_size=10000,
+    batch_size=64,
+    exploration_noise=0.1,  # Gaussian exploration noise
+    name="DDPG"
+)
+
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:441`
+
+### Actor-Critic Architecture
+
+```python
+from neurenix.nn import Sequential, Linear, ReLU, Tanh
+
+# Actor: deterministic policy
+actor = Sequential(
+    Linear(obs_dim, 64),
+    ReLU(),
+    Linear(64, 64),
+    ReLU(),
+    Linear(64, action_dim),
+    Tanh()  # Bound actions
+)
+
+# Critic: Q-function Q(s, a)
+critic = Sequential(
+    Linear(obs_dim + action_dim, 64),
+    ReLU(),
+    Linear(64, 64),
+    ReLU(),
+    Linear(64, 1)
+)
+```
+
+### Exploration Noise
+
+```python
+# Add Gaussian noise for exploration
+action = actor(state)
+noisy_action = action + np.random.normal(0, exploration_noise, action.shape)
+noisy_action = np.clip(noisy_action, action_low, action_high)
+```
+
+### Soft Target Updates
+
+```python
+# Slowly update target networks
+for target_param, param in zip(target_network.parameters(), network.parameters()):
+    target_param.data.copy_(
+        tau * param.data + (1 - tau) * target_param.data
+    )
+```
+
+### Loss Functions
+
+```python
+# Critic loss
+q_values = critic(states, actions)
+target_actions = target_actor(next_states)
+target_q = target_critic(next_states, target_actions)
+target_values = rewards + gamma * target_q * (1 - dones)
+critic_loss = ((q_values - target_values) ** 2).mean()
+
+# Actor loss
+actor_loss = -critic(states, actor(states)).mean()
+```
+
+## Soft Actor-Critic (SAC)
+
+SAC learns a stochastic policy with maximum entropy for robust learning.
+
+### Basic Usage
+
+```python
+from neurenix.rl import SAC
+
+agent = SAC(
+    observation_space=observation_space,
+    action_space=action_space,
+    actor_hidden_dims=[64, 64],
+    critic_hidden_dims=[64, 64],
+    actor_learning_rate=0.0003,
+    critic_learning_rate=0.0003,
+    alpha_learning_rate=0.0003,  # Temperature learning rate
+    gamma=0.99,
+    tau=0.005,
+    alpha=0.2,                   # Initial temperature
+    auto_alpha=True,             # Automatic temperature tuning
+    buffer_size=10000,
+    batch_size=64,
+    name="SAC"
+)
+
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+**Source**: `neurenix/rl/algorithms.py:511`
+
+### Maximum Entropy Framework
+
+SAC maximizes both reward and entropy:
+
+```python
+# Objective
+J = E[Σ_t (reward_t + α * entropy_t)]
+
+# Policy loss
+policy_loss = -(q_value - alpha * log_prob).mean()
+
+# Q-function loss  
+q_loss = ((q_values - target_values) ** 2).mean()
+
+# Temperature loss (if auto_alpha=True)
+alpha_loss = -(log_alpha * (log_prob + target_entropy).detach()).mean()
+```
+
+### Twin Q-Networks
+
+SAC uses two Q-networks to reduce overestimation:
+
+```python
+# Two Q-networks
+q1 = critic1(state, action)
+q2 = critic2(state, action)
+
+# Use minimum for target
+q_target = min(target_q1, target_q2)
+```
+
+### Automatic Temperature Tuning
+
+```python
+if auto_alpha:
+    # Target entropy (heuristic)
+    target_entropy = -action_dim
+    
+    # Update temperature
+    alpha_loss = -(log_alpha * (log_prob + target_entropy).detach()).mean()
+    alpha_optimizer.zero_grad()
+    alpha_loss.backward()
+    alpha_optimizer.step()
+    
+    alpha = log_alpha.exp()
+```
+
+## Training Tips
+
+### Hyperparameter Tuning
+
+```python
+# Learning rates
+actor_lr = 0.0003    # Typical for actor
+critic_lr = 0.001    # Often higher than actor
+
+# Discount factor
+gamma = 0.99         # Standard for most tasks
+gamma = 0.995        # For longer horizon tasks
+
+# Buffer size
+buffer_size = 10000  # Small environments
+buffer_size = 100000 # Complex environments
+
+# Batch size
+batch_size = 64      # Standard
+batch_size = 256     # Large replay buffers
+```
+
+### Monitoring Training
+
+```python
+# Custom callback
+def training_callback(metrics):
+    episode = metrics["episode"]
+    reward = metrics["reward"]
+    
+    # Log to tensorboard, wandb, etc.
+    logger.log({"reward": reward}, step=episode)
+    
+    # Early stopping
+    if reward > target_reward:
+        return True  # Stop training
+    return False
+
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    callback=training_callback
+)
+```
+
+**Source**: `neurenix/rl/agent.py:106`
+
+### Evaluation
+
+```python
+# Disable exploration for evaluation
+original_epsilon = agent.policy.epsilon
+agent.policy.epsilon = 0.0
+
+# Run evaluation episodes
+eval_rewards = []
+for _ in range(100):
+    state = env.reset()
+    episode_reward = 0
+    done = False
+    
+    while not done:
+        action = agent.act(state)
+        state, reward, done, _ = env.step(action)
+        episode_reward += reward
+    
+    eval_rewards.append(episode_reward)
+
+# Restore exploration
+agent.policy.epsilon = original_epsilon
+
+print(f"Mean reward: {np.mean(eval_rewards):.2f}")
+print(f"Std reward: {np.std(eval_rewards):.2f}")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Training" icon="chart-line" href="/rl/training">
+    Master advanced training techniques
+  </Card>
+  <Card title="Policies" icon="map" href="/rl/policies">
+    Learn about RL policies
+  </Card>
+</CardGroup>

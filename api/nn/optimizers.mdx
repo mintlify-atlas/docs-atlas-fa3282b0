@@ -1,0 +1,403 @@
+---
+title: 'Optimizers'
+description: 'Optimization algorithms for training neural networks'
+---
+
+## Overview
+
+Optimizers update model parameters based on gradients to minimize the loss function.
+
+## Optimizer Base Class
+
+```python
+class Optimizer:
+    def __init__(self, params: Iterable[Tensor], defaults: Dict[str, Any])
+```
+
+Base class for all optimizers.
+
+### Methods
+
+#### zero_grad
+
+```python
+def zero_grad(self) -> None
+```
+
+Reset the gradients of all optimized tensors. Should be called before computing gradients for a new batch.
+
+#### step
+
+```python
+def step(self) -> None
+```
+
+Update the parameters based on the current gradients. Should be called after computing gradients.
+
+#### add_param_group
+
+```python
+def add_param_group(self, param_group: Dict[str, Any]) -> None
+```
+
+Add a parameter group to the optimizer with different hyperparameters.
+
+## SGD - Stochastic Gradient Descent
+
+```python
+class SGD(Optimizer):
+    def __init__(
+        self,
+        params: Iterable[Tensor],
+        lr: float = 0.01,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+        dampening: float = 0.0,
+        nesterov: bool = False,
+    )
+```
+
+Stochastic gradient descent with optional momentum.
+
+### Parameters
+
+<ParamField path="params" type="Iterable[Tensor]" required>
+  Iterable of parameters to optimize.
+</ParamField>
+
+<ParamField path="lr" type="float" default="0.01">
+  Learning rate.
+</ParamField>
+
+<ParamField path="momentum" type="float" default="0.0">
+  Momentum factor. Typical values: 0.9, 0.95.
+</ParamField>
+
+<ParamField path="weight_decay" type="float" default="0.0">
+  Weight decay (L2 penalty). Typical values: 1e-4, 1e-5.
+</ParamField>
+
+<ParamField path="dampening" type="float" default="0.0">
+  Dampening for momentum.
+</ParamField>
+
+<ParamField path="nesterov" type="bool" default="False">
+  Enables Nesterov momentum. Requires momentum > 0 and dampening == 0.
+</ParamField>
+
+### Example
+
+```python
+import neurenix as nx
+
+model = YourModel()
+optimizer = nx.optim.SGD(
+    model.parameters(),
+    lr=0.01,
+    momentum=0.9,
+    weight_decay=1e-4
+)
+
+for epoch in range(100):
+    for inputs, targets in train_loader:
+        # Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+        
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+```
+
+### When to Use
+
+- Simple baseline
+- When you have a well-tuned learning rate schedule
+- Training CNNs with batch normalization
+
+## Adam - Adaptive Moment Estimation
+
+```python
+class Adam(Optimizer):
+    def __init__(
+        self,
+        params: Iterable[Tensor],
+        lr: float = 0.001,
+        betas: Tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+        amsgrad: bool = False,
+    )
+```
+
+Adaptive learning rate optimization algorithm.
+
+### Parameters
+
+<ParamField path="params" type="Iterable[Tensor]" required>
+  Iterable of parameters to optimize.
+</ParamField>
+
+<ParamField path="lr" type="float" default="0.001">
+  Learning rate.
+</ParamField>
+
+<ParamField path="betas" type="Tuple[float, float]" default="(0.9, 0.999)">
+  Coefficients for computing running averages of gradient and its square.
+</ParamField>
+
+<ParamField path="eps" type="float" default="1e-8">
+  Term added to the denominator for numerical stability.
+</ParamField>
+
+<ParamField path="weight_decay" type="float" default="0.0">
+  Weight decay (L2 penalty).
+</ParamField>
+
+<ParamField path="amsgrad" type="bool" default="False">
+  Whether to use the AMSGrad variant.
+</ParamField>
+
+### Example
+
+```python
+optimizer = nx.optim.Adam(
+    model.parameters(),
+    lr=0.001,
+    betas=(0.9, 0.999),
+    weight_decay=1e-5
+)
+
+for epoch in range(100):
+    for inputs, targets in train_loader:
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+```
+
+### When to Use
+
+- Default choice for most tasks
+- Works well with sparse gradients
+- Good for transformers and NLP models
+- Handles noisy gradients well
+
+## AdamW
+
+```python
+class AdamW(Optimizer):
+    def __init__(
+        self,
+        params: Iterable[Tensor],
+        lr: float = 0.001,
+        betas: Tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0.01,
+        amsgrad: bool = False,
+    )
+```
+
+Adam with decoupled weight decay. Often performs better than Adam with weight decay.
+
+### Example
+
+```python
+optimizer = nx.optim.AdamW(
+    model.parameters(),
+    lr=0.001,
+    weight_decay=0.01  # Typically higher than Adam
+)
+```
+
+## RMSprop
+
+```python
+class RMSprop(Optimizer):
+    def __init__(
+        self,
+        params: Iterable[Tensor],
+        lr: float = 0.01,
+        alpha: float = 0.99,
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+        momentum: float = 0.0,
+    )
+```
+
+Root Mean Square Propagation optimizer.
+
+### When to Use
+
+- RNNs and LSTMs
+- Non-stationary objectives
+
+## Advanced Usage
+
+### Different Learning Rates for Different Layers
+
+```python
+model = YourModel()
+
+optimizer = nx.optim.Adam([
+    {'params': model.features.parameters(), 'lr': 1e-4},
+    {'params': model.classifier.parameters(), 'lr': 1e-3}
+])
+```
+
+### Gradient Clipping
+
+```python
+for inputs, targets in train_loader:
+    outputs = model(inputs)
+    loss = criterion(outputs, targets)
+    
+    optimizer.zero_grad()
+    loss.backward()
+    
+    # Clip gradients
+    nx.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    
+    optimizer.step()
+```
+
+### Learning Rate Scheduling
+
+```python
+from neurenix.utils import StepLR, ReduceLROnPlateau
+
+optimizer = nx.optim.Adam(model.parameters(), lr=0.001)
+scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+
+for epoch in range(100):
+    train(model, optimizer)
+    scheduler.step()
+    print(f"LR: {scheduler.get_last_lr()}")
+
+# Or with ReduceLROnPlateau
+scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=10)
+
+for epoch in range(100):
+    train_loss = train(model, optimizer)
+    val_loss = validate(model)
+    scheduler.step(val_loss)
+```
+
+### Mixed Precision Training
+
+```python
+from neurenix.amp import autocast, GradScaler
+
+model = YourModel().to(device)
+optimizer = nx.optim.Adam(model.parameters())
+scaler = GradScaler()
+
+for inputs, targets in train_loader:
+    optimizer.zero_grad()
+    
+    # Forward pass with autocast
+    with autocast():
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+    
+    # Backward pass with scaled gradients
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+```
+
+## Complete Training Example
+
+```python
+import neurenix as nx
+from neurenix.utils import StepLR
+
+# Setup
+model = MyModel()
+device = nx.Device(nx.DeviceType.CUDA, 0)
+model.to(device)
+
+criterion = nx.CrossEntropyLoss()
+optimizer = nx.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+
+# Training loop
+for epoch in range(100):
+    model.train()
+    train_loss = 0.0
+    
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+        
+        # Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+        
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        
+        # Optional: gradient clipping
+        nx.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        
+        optimizer.step()
+        
+        train_loss += loss.item()
+        
+        if batch_idx % 100 == 0:
+            print(f"Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item():.4f}")
+    
+    # Validation
+    model.eval()
+    val_loss = 0.0
+    with nx.Tensor.no_grad():
+        for inputs, targets in val_loader:
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+            val_loss += loss.item()
+    
+    # Update learning rate
+    scheduler.step()
+    
+    print(f"Epoch {epoch}: Train Loss = {train_loss/len(train_loader):.4f}, "
+          f"Val Loss = {val_loss/len(val_loader):.4f}, "
+          f"LR = {optimizer.param_groups[0]['lr']:.6f}")
+```
+
+## Optimizer Comparison
+
+| Optimizer | Speed | Memory | Convergence | Best For |
+|-----------|-------|--------|-------------|----------|
+| **SGD** | Fast | Low | Slower but stable | Large batches, fine-tuning |
+| **SGD+Momentum** | Fast | Low | Better than SGD | CNNs, proven architectures |
+| **Adam** | Medium | Medium | Fast | General purpose, transformers |
+| **AdamW** | Medium | Medium | Fast | Transformers, modern models |
+| **RMSprop** | Medium | Medium | Good | RNNs, non-stationary problems |
+
+## Tips
+
+<Tip>
+  **Start with Adam**: It's a good default choice for most tasks with lr=0.001.
+</Tip>
+
+<Tip>
+  **Use AdamW for transformers**: It often performs better than Adam for large language models.
+</Tip>
+
+<Tip>
+  **SGD with momentum**: Can achieve better final performance than Adam but requires more tuning.
+</Tip>
+
+<Tip>
+  **Learning rate**: Most important hyperparameter. Use learning rate scheduling for better results.
+</Tip>
+
+<Tip>
+  **Weight decay**: Typical values are 1e-4 or 1e-5 for regularization.
+</Tip>

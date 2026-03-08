@@ -1,0 +1,188 @@
+---
+title: 'Agent'
+description: 'Base class for AI agents'
+---
+
+## Overview
+
+The `Agent` class provides a foundation for implementing various types of agents, such as reinforcement learning agents or autonomous agents.
+
+## Class Definition
+
+```python
+class Agent:
+    def __init__(self, name: Optional[str] = None)
+```
+
+### Parameters
+
+<ParamField path="name" type="Optional[str]">
+  The name of the agent. If None, a random name is generated.
+</ParamField>
+
+## Properties
+
+### name
+
+```python
+@property
+def name(self) -> str
+```
+
+Get the name of the agent.
+
+<ResponseField name="return" type="str">
+  The agent's name.
+</ResponseField>
+
+## Core Methods
+
+### act
+
+```python
+def act(self, observation: Any) -> Any
+```
+
+Choose an action based on the current observation. This method should be overridden by all subclasses.
+
+<ParamField path="observation" type="Any" required>
+  The current observation of the environment.
+</ParamField>
+
+<ResponseField name="return" type="Any">
+  The action to take.
+</ResponseField>
+
+### learn
+
+```python
+def learn(self, experience: Any) -> None
+```
+
+Learn from experience. This method should be overridden by all subclasses that support learning.
+
+<ParamField path="experience" type="Any" required>
+  The experience to learn from.
+</ParamField>
+
+### reset
+
+```python
+def reset(self) -> None
+```
+
+Reset the agent's state. This is typically called at the beginning of a new episode.
+
+## Persistence
+
+### save
+
+```python
+def save(self, path: str) -> None
+```
+
+Save the agent's state to a file.
+
+<ParamField path="path" type="str" required>
+  The path to save the agent to.
+</ParamField>
+
+### load
+
+```python
+def load(self, path: str) -> None
+```
+
+Load the agent's state from a file.
+
+<ParamField path="path" type="str" required>
+  The path to load the agent from.
+</ParamField>
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.agent import Agent
+
+# Define a custom agent
+class MyAgent(Agent):
+    def __init__(self, name=None):
+        super().__init__(name)
+        self.policy = None  # Your policy network
+        
+    def act(self, observation):
+        # Implement action selection logic
+        if self.policy is None:
+            return random.choice([0, 1, 2, 3])  # Random action
+        
+        # Use policy network
+        with nx.Tensor.no_grad():
+            action = self.policy(observation)
+        return action
+    
+    def learn(self, experience):
+        # Implement learning logic
+        state, action, reward, next_state, done = experience
+        
+        # Update policy based on experience
+        loss = self.compute_loss(state, action, reward, next_state, done)
+        loss.backward()
+        self.optimizer.step()
+    
+    def reset(self):
+        super().reset()
+        # Reset any episode-specific state
+        self._episode_rewards = []
+
+# Create an agent
+agent = MyAgent(name="MyCustomAgent")
+
+# Use the agent in an environment
+observation = env.reset()
+
+for step in range(1000):
+    # Agent selects an action
+    action = agent.act(observation)
+    
+    # Environment steps
+    next_observation, reward, done, info = env.step(action)
+    
+    # Agent learns from experience
+    experience = (observation, action, reward, next_observation, done)
+    agent.learn(experience)
+    
+    observation = next_observation
+    
+    if done:
+        agent.reset()
+        observation = env.reset()
+
+# Save the trained agent
+agent.save("my_agent.pth")
+
+# Load the agent later
+new_agent = MyAgent()
+new_agent.load("my_agent.pth")
+```
+
+## Built-in Agent Types
+
+Neurenix provides several built-in agent implementations:
+
+<CardGroup cols={2}>
+  <Card title="DQN Agent" icon="brain">
+    Deep Q-Network agent for discrete action spaces
+  </Card>
+  <Card title="A2C Agent" icon="network-wired">
+    Advantage Actor-Critic agent
+  </Card>
+  <Card title="PPO Agent" icon="chart-line">
+    Proximal Policy Optimization agent
+  </Card>
+  <Card title="SAC Agent" icon="atom">
+    Soft Actor-Critic agent for continuous control
+  </Card>
+</CardGroup>
+
+See the [RL Algorithms](/api/rl-algorithms) documentation for details on these implementations.

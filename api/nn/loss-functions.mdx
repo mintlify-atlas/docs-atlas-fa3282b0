@@ -1,0 +1,360 @@
+---
+title: 'Loss Functions'
+description: 'Loss functions for training neural networks'
+---
+
+## Overview
+
+Loss functions measure the discrepancy between predicted and target values, guiding the optimization process during training.
+
+## MSELoss
+
+```python
+class MSELoss(Loss):
+    def __init__(self, reduction: str = "mean")
+```
+
+Mean Squared Error loss: `MSE = mean((prediction - target)^2)`
+
+### Parameters
+
+<ParamField path="reduction" type="str" default="mean">
+  Specifies the reduction to apply: 'none', 'mean', or 'sum'.
+</ParamField>
+
+### Example
+
+```python
+import neurenix as nx
+
+criterion = nx.MSELoss()
+
+# Predictions and targets
+predictions = nx.Tensor([[1.0, 2.0], [3.0, 4.0]])
+targets = nx.Tensor([[1.5, 2.5], [3.5, 4.5]])
+
+loss = criterion(predictions, targets)
+print(loss)  # Mean squared error
+
+# No reduction
+criterion_no_reduction = nx.MSELoss(reduction='none')
+loss_per_element = criterion_no_reduction(predictions, targets)
+print(loss_per_element.shape)  # (2, 2)
+```
+
+### Use Cases
+
+- Regression tasks
+- Image reconstruction
+- Autoencoders
+
+## L1Loss
+
+```python
+class L1Loss(Loss):
+    def __init__(self, reduction: str = "mean")
+```
+
+Mean Absolute Error loss: `L1 = mean(|prediction - target|)`
+
+### Example
+
+```python
+criterion = nx.L1Loss()
+
+predictions = nx.Tensor([1.0, 2.0, 3.0])
+targets = nx.Tensor([1.5, 2.5, 3.5])
+
+loss = criterion(predictions, targets)
+print(loss)  # 0.5
+```
+
+### Use Cases
+
+- Robust regression (less sensitive to outliers than MSE)
+- Image-to-image translation
+
+## CrossEntropyLoss
+
+```python
+class CrossEntropyLoss(Loss):
+    def __init__(
+        self,
+        weight: Optional[Tensor] = None,
+        ignore_index: int = -100,
+        reduction: str = "mean",
+    )
+```
+
+Combines LogSoftmax and NLLLoss. Used for multi-class classification.
+
+### Parameters
+
+<ParamField path="weight" type="Optional[Tensor]">
+  Manual rescaling weight for each class. Shape: (num_classes,)
+</ParamField>
+
+<ParamField path="ignore_index" type="int" default="-100">
+  Specifies a target value that is ignored and does not contribute to the gradient.
+</ParamField>
+
+<ParamField path="reduction" type="str" default="mean">
+  Specifies the reduction to apply: 'none', 'mean', or 'sum'.
+</ParamField>
+
+### Example
+
+```python
+# Multi-class classification
+criterion = nx.CrossEntropyLoss()
+
+# Logits from model (before softmax)
+logits = nx.Tensor([
+    [2.0, 1.0, 0.1],  # Sample 1
+    [0.1, 3.0, 0.2],  # Sample 2
+    [0.5, 0.3, 2.5]   # Sample 3
+])
+
+# Ground truth class indices
+targets = nx.Tensor([0, 1, 2])  # Classes: 0, 1, 2
+
+loss = criterion(logits, targets)
+print(loss)
+
+# With class weights (for imbalanced datasets)
+class_weights = nx.Tensor([1.0, 2.0, 3.0])  # Higher weight for rare classes
+criterion_weighted = nx.CrossEntropyLoss(weight=class_weights)
+loss = criterion_weighted(logits, targets)
+
+# Ignore specific class
+criterion_ignore = nx.CrossEntropyLoss(ignore_index=0)
+targets_with_ignore = nx.Tensor([0, 1, 2])  # Class 0 will be ignored
+loss = criterion_ignore(logits, targets_with_ignore)
+```
+
+### Use Cases
+
+- Multi-class classification
+- Image classification
+- Text classification
+- Semantic segmentation
+
+## BCELoss
+
+```python
+class BCELoss(Loss):
+    def __init__(
+        self,
+        weight: Optional[Tensor] = None,
+        reduction: str = "mean",
+    )
+```
+
+Binary Cross Entropy loss. Used for binary classification with sigmoid outputs.
+
+### Parameters
+
+<ParamField path="weight" type="Optional[Tensor]">
+  Manual rescaling weight for the loss of each batch element.
+</ParamField>
+
+<ParamField path="reduction" type="str" default="mean">
+  Specifies the reduction to apply: 'none', 'mean', or 'sum'.
+</ParamField>
+
+### Example
+
+```python
+criterion = nx.BCELoss()
+
+# Predictions (after sigmoid, range 0-1)
+predictions = nx.Tensor([0.9, 0.2, 0.8, 0.1])
+targets = nx.Tensor([1.0, 0.0, 1.0, 0.0])
+
+loss = criterion(predictions, targets)
+print(loss)
+```
+
+### Use Cases
+
+- Binary classification
+- Multi-label classification (independent binary decisions)
+
+## BCEWithLogitsLoss
+
+```python
+class BCEWithLogitsLoss(Loss):
+    def __init__(
+        self,
+        weight: Optional[Tensor] = None,
+        pos_weight: Optional[Tensor] = None,
+        reduction: str = "mean",
+    )
+```
+
+Combines Sigmoid and BCELoss. More numerically stable than using BCELoss separately.
+
+### Parameters
+
+<ParamField path="weight" type="Optional[Tensor]">
+  Manual rescaling weight for the loss of each batch element.
+</ParamField>
+
+<ParamField path="pos_weight" type="Optional[Tensor]">
+  Weight for positive examples. Useful for imbalanced datasets.
+</ParamField>
+
+<ParamField path="reduction" type="str" default="mean">
+  Specifies the reduction to apply: 'none', 'mean', or 'sum'.
+</ParamField>
+
+### Example
+
+```python
+criterion = nx.BCEWithLogitsLoss()
+
+# Logits from model (before sigmoid)
+logits = nx.Tensor([2.0, -1.0, 1.5, -2.0])
+targets = nx.Tensor([1.0, 0.0, 1.0, 0.0])
+
+loss = criterion(logits, targets)
+print(loss)
+
+# With positive weight for imbalanced data
+pos_weight = nx.Tensor([3.0])  # Increase importance of positive examples
+criterion_weighted = nx.BCEWithLogitsLoss(pos_weight=pos_weight)
+loss = criterion_weighted(logits, targets)
+```
+
+### Use Cases
+
+- Binary classification (preferred over BCELoss for numerical stability)
+- Multi-label classification
+- Object detection
+
+## Training Example
+
+```python
+import neurenix as nx
+
+# Multi-class classification example
+class Classifier(nx.Module):
+    def __init__(self, input_size, num_classes):
+        super().__init__()
+        self.fc1 = nx.Linear(input_size, 128)
+        self.fc2 = nx.Linear(128, num_classes)
+        self.relu = nx.ReLU()
+    
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)  # Return logits (no softmax)
+        return x
+
+# Create model
+model = Classifier(input_size=784, num_classes=10)
+
+# Loss and optimizer
+criterion = nx.CrossEntropyLoss()
+optimizer = nx.optim.Adam(model.parameters(), lr=0.001)
+
+# Training loop
+for epoch in range(10):
+    for inputs, targets in train_loader:
+        # Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+        
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        if batch_idx % 100 == 0:
+            print(f"Loss: {loss.item():.4f}")
+
+# Regression example
+class Regressor(nx.Module):
+    def __init__(self, input_size):
+        super().__init__()
+        self.fc1 = nx.Linear(input_size, 64)
+        self.fc2 = nx.Linear(64, 1)
+        self.relu = nx.ReLU()
+    
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
+
+model = Regressor(input_size=10)
+criterion = nx.MSELoss()
+optimizer = nx.optim.SGD(model.parameters(), lr=0.01)
+
+for epoch in range(100):
+    predictions = model(x_train)
+    loss = criterion(predictions, y_train)
+    
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+```
+
+## Loss Function Selection Guide
+
+| Task | Loss Function | Output Activation |
+|------|---------------|-------------------|
+| **Binary Classification** | BCEWithLogitsLoss | None (logits) |
+| **Multi-class Classification** | CrossEntropyLoss | None (logits) |
+| **Multi-label Classification** | BCEWithLogitsLoss | None (logits) |
+| **Regression** | MSELoss or L1Loss | None or ReLU (if positive) |
+| **Image Reconstruction** | MSELoss or L1Loss | Sigmoid or Tanh |
+| **Semantic Segmentation** | CrossEntropyLoss | None (logits) |
+| **Object Detection** | Combination of losses | Various |
+
+## Custom Loss Functions
+
+```python
+class CustomLoss(nx.nn.Loss):
+    def __init__(self, alpha=0.5, reduction="mean"):
+        super().__init__(reduction)
+        self.alpha = alpha
+    
+    def forward(self, input, target):
+        # Custom loss computation
+        mse = (input - target) ** 2
+        mae = (input - target).abs()
+        
+        # Combination of MSE and MAE
+        loss = self.alpha * mse + (1 - self.alpha) * mae
+        
+        # Apply reduction
+        if self.reduction == "none":
+            return loss
+        elif self.reduction == "mean":
+            return loss.mean()
+        else:  # sum
+            return loss.sum()
+
+# Use custom loss
+criterion = CustomLoss(alpha=0.7)
+loss = criterion(predictions, targets)
+```
+
+## Tips
+
+<Tip>
+  **Classification**: Always use CrossEntropyLoss or BCEWithLogitsLoss (they include the activation). Don't apply Softmax/Sigmoid before the loss.
+</Tip>
+
+<Tip>
+  **Imbalanced datasets**: Use class weights or pos_weight to handle class imbalance.
+</Tip>
+
+<Tip>
+  **Regression**: Start with MSELoss. If you have outliers, try L1Loss.
+</Tip>
+
+<Tip>
+  **Numerical stability**: Use the "WithLogits" versions of losses when possible for better numerical stability.
+</Tip>

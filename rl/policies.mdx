@@ -1,0 +1,384 @@
+---
+title: 'Policies'
+description: 'Action selection strategies for reinforcement learning agents'
+---
+
+## Overview
+
+Policies define how agents select actions given states. Neurenix provides multiple policy types for different learning scenarios, supporting both discrete and continuous action spaces.
+
+## Base Policy Class
+
+All policies inherit from the base `Policy` class:
+
+```python
+from neurenix.rl.policy import Policy
+import numpy as np
+from neurenix.tensor import Tensor
+
+class CustomPolicy(Policy):
+    def __init__(self, name="CustomPolicy"):
+        super().__init__(name=name)
+    
+    def select_action(self, state):
+        # Implement custom action selection
+        return action
+```
+
+**Source**: `neurenix/rl/policy.py:16`
+
+### Key Methods
+
+| Method | Description |
+|--------|-------------|
+| `__call__(state)` | Select action (calls `select_action`) |
+| `select_action(state)` | Core action selection logic |
+| `step()` | Update policy parameters (e.g., epsilon decay) |
+| `reset()` | Reset policy to initial state |
+| `save(path)` | Save policy to disk |
+| `load(path)` | Load policy from disk |
+
+## Random Policy
+
+Selects actions uniformly at random from the action space:
+
+```python
+from neurenix.rl.policy import RandomPolicy
+
+# For discrete actions
+action_space = {
+    "type": "discrete",
+    "n": 4  # 4 possible actions
+}
+
+policy = RandomPolicy(
+    action_space=action_space,
+    name="RandomPolicy"
+)
+
+action = policy(state)  # Returns integer in [0, 3]
+```
+
+**Source**: `neurenix/rl/policy.py:84`
+
+### Continuous Action Spaces
+
+```python
+# For continuous actions
+action_space = {
+    "type": "box",
+    "shape": (2,),
+    "low": -1.0,
+    "high": 1.0
+}
+
+policy = RandomPolicy(action_space=action_space)
+action = policy(state)  # Returns array in [-1, 1]^2
+```
+
+## Greedy Policy
+
+Selects the action with the highest value according to a value function:
+
+```python
+from neurenix.rl.policy import GreedyPolicy
+from neurenix.nn import Sequential, Linear, ReLU
+
+# Create Q-network
+q_network = Sequential(
+    Linear(state_dim, 64),
+    ReLU(),
+    Linear(64, action_dim)
+)
+
+action_space = {
+    "type": "discrete",
+    "n": action_dim
+}
+
+policy = GreedyPolicy(
+    value_function=q_network,
+    action_space=action_space,
+    name="GreedyPolicy"
+)
+
+# Always selects argmax_a Q(s, a)
+action = policy(state)
+```
+
+**Source**: `neurenix/rl/policy.py:124`
+
+## Epsilon-Greedy Policy
+
+Balances exploration and exploitation with epsilon parameter:
+
+```python
+from neurenix.rl.policy import EpsilonGreedyPolicy
+
+policy = EpsilonGreedyPolicy(
+    value_function=q_network,
+    action_space=action_space,
+    epsilon_start=1.0,      # Start with full exploration
+    epsilon_end=0.01,       # Minimum exploration rate
+    epsilon_decay=0.995,    # Decay rate per step
+    name="EpsilonGreedy"
+)
+
+# Select action (explores with probability epsilon)
+action = policy(state)
+
+# Update epsilon after each step
+policy.step()  # epsilon *= epsilon_decay
+
+# Check current exploration rate
+print(f"Current epsilon: {policy.epsilon}")
+
+# Reset to initial epsilon
+policy.reset()
+```
+
+**Source**: `neurenix/rl/policy.py:174`
+
+### Exploration Schedule
+
+The epsilon value decays over time:
+
+```python
+epsilon(t) = max(epsilon_end, epsilon_start * epsilon_decay^t)
+```
+
+This ensures the agent:
+- Explores broadly early in training (high epsilon)
+- Exploits learned knowledge later (low epsilon)
+
+## Softmax Policy
+
+Selects actions according to a Boltzmann distribution:
+
+```python
+from neurenix.rl.policy import SoftmaxPolicy
+
+policy = SoftmaxPolicy(
+    value_function=q_network,
+    action_space=action_space,
+    temperature=1.0,  # Controls randomness
+    name="Softmax"
+)
+
+action = policy(state)
+```
+
+**Source**: `neurenix/rl/policy.py:240`
+
+### Temperature Parameter
+
+```python
+P(a|s) = exp(Q(s,a) / T) / Σ_a' exp(Q(s,a') / T)
+```
+
+- **High temperature** (T >> 1): More uniform distribution (more exploration)
+- **Low temperature** (T → 0): More peaked distribution (more exploitation)
+
+```python
+# High exploration
+hot_policy = SoftmaxPolicy(q_network, action_space, temperature=5.0)
+
+# Low exploration
+cool_policy = SoftmaxPolicy(q_network, action_space, temperature=0.1)
+```
+
+## Gaussian Policy
+
+For continuous action spaces, samples from Gaussian distribution:
+
+```python
+from neurenix.rl.policy import GaussianPolicy
+from neurenix.nn import Sequential, Linear, ReLU, Tanh
+
+# Policy network outputs action mean
+policy_network = Sequential(
+    Linear(state_dim, 64),
+    ReLU(),
+    Linear(64, 64),
+    ReLU(),
+    Linear(64, action_dim),
+    Tanh()  # Bound outputs to [-1, 1]
+)
+
+action_space = {
+    "type": "box",
+    "shape": (action_dim,),
+    "low": -1.0,
+    "high": 1.0
+}
+
+policy = GaussianPolicy(
+    policy_network=policy_network,
+    action_space=action_space,
+    std=0.1,  # Fixed standard deviation
+    name="Gaussian"
+)
+
+# Sample action from N(μ(s), σ²)
+action = policy(state)
+```
+
+**Source**: `neurenix/rl/policy.py:300`
+
+### Action Clipping
+
+Actions are automatically clipped to valid range:
+
+```python
+action = np.clip(
+    sampled_action,
+    action_space["low"],
+    action_space["high"]
+)
+```
+
+## Policy Comparison
+
+| Policy | Action Space | Exploration | Use Case |
+|--------|--------------|-------------|----------|
+| Random | Discrete/Continuous | Maximum | Baseline, early exploration |
+| Greedy | Discrete | None | Evaluation, final policy |
+| Epsilon-Greedy | Discrete | Controlled | DQN, Q-learning |
+| Softmax | Discrete | Temperature-based | Value-based methods |
+| Gaussian | Continuous | Fixed noise | Actor-critic, policy gradient |
+
+## Using Policies with Agents
+
+```python
+from neurenix.rl.agent import Agent
+from neurenix.rl.value import ValueNetworkFunction
+
+# Create policy and value function
+policy = EpsilonGreedyPolicy(
+    value_function=q_network,
+    action_space=action_space,
+    epsilon_start=1.0,
+    epsilon_end=0.01,
+    epsilon_decay=0.995
+)
+
+value_function = ValueNetworkFunction(
+    value_network=v_network,
+    optimizer=optimizer
+)
+
+# Create agent
+agent = Agent(
+    policy=policy,
+    value_function=value_function,
+    gamma=0.99
+)
+
+# Use agent
+action = agent.act(state)
+```
+
+**Source**: `neurenix/rl/agent.py:18`
+
+## Custom Policies
+
+Implement domain-specific action selection:
+
+```python
+from neurenix.rl.policy import Policy
+from neurenix.tensor import Tensor
+import numpy as np
+
+class UCBPolicy(Policy):
+    """Upper Confidence Bound policy for bandits."""
+    
+    def __init__(self, n_actions, c=2.0):
+        super().__init__(name="UCB")
+        self.n_actions = n_actions
+        self.c = c
+        self.counts = np.zeros(n_actions)
+        self.values = np.zeros(n_actions)
+        self.t = 0
+    
+    def select_action(self, state):
+        self.t += 1
+        
+        # Try each action at least once
+        if self.t <= self.n_actions:
+            return self.t - 1
+        
+        # Compute UCB scores
+        ucb_scores = self.values + self.c * np.sqrt(
+            np.log(self.t) / (self.counts + 1e-8)
+        )
+        
+        return np.argmax(ucb_scores)
+    
+    def update(self, action, reward):
+        self.counts[action] += 1
+        n = self.counts[action]
+        self.values[action] += (reward - self.values[action]) / n
+
+# Use custom policy
+policy = UCBPolicy(n_actions=10, c=2.0)
+action = policy(state)
+policy.update(action, reward)
+```
+
+## Best Practices
+
+### Exploration Schedule
+
+```python
+# Linear decay
+epsilon = max(epsilon_end, epsilon - decay_rate)
+
+# Exponential decay (recommended)
+epsilon = max(epsilon_end, epsilon * decay_factor)
+
+# Step-wise decay
+if episode % 100 == 0:
+    epsilon = max(epsilon_end, epsilon * 0.9)
+```
+
+### Action Space Normalization
+
+```python
+# Normalize continuous actions
+action_range = action_space["high"] - action_space["low"]
+action_center = (action_space["high"] + action_space["low"]) / 2
+
+# Map from [-1, 1] to action space
+raw_action = policy_network(state)  # in [-1, 1]
+action = action_center + raw_action * (action_range / 2)
+```
+
+### Policy Evaluation
+
+```python
+# Disable exploration for evaluation
+original_epsilon = policy.epsilon
+policy.epsilon = 0.0  # Pure exploitation
+
+# Run evaluation episodes
+eval_rewards = []
+for _ in range(100):
+    episode_reward = run_episode(env, agent)
+    eval_rewards.append(episode_reward)
+
+# Restore exploration
+policy.epsilon = original_epsilon
+
+print(f"Average reward: {np.mean(eval_rewards)}")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Algorithms" icon="brain" href="/rl/algorithms">
+    Learn about RL algorithms
+  </Card>
+  <Card title="Value Functions" icon="calculator" href="/rl/training">
+    Understand value estimation
+  </Card>
+</CardGroup>

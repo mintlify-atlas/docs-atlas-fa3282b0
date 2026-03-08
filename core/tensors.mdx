@@ -1,0 +1,522 @@
+---
+title: Tensors
+description: Multi-dimensional arrays with automatic device management and hardware acceleration
+---
+
+## Overview
+
+The `Tensor` class is the fundamental data structure in Neurenix, representing multi-dimensional arrays with support for automatic differentiation, device placement, and hardware acceleration.
+
+```python
+from neurenix.tensor import Tensor
+from neurenix.device import Device, DeviceType
+
+# Create a tensor from Python list
+x = Tensor([[1, 2, 3], [4, 5, 6]])
+print(x.shape)  # (2, 3)
+print(x.dtype)  # DType.FLOAT32
+```
+
+## Creating Tensors
+
+<Tabs>
+  <Tab title="From Data">
+    ```python
+    import numpy as np
+    from neurenix.tensor import Tensor
+    
+    # From Python list
+    t1 = Tensor([1, 2, 3, 4])
+    
+    # From NumPy array
+    arr = np.array([[1.0, 2.0], [3.0, 4.0]])
+    t2 = Tensor(arr)
+    
+    # From another tensor (creates a copy)
+    t3 = Tensor(t1)
+    
+    # From scalar
+    t4 = Tensor.tensor(42.0)
+    ```
+  </Tab>
+  
+  <Tab title="Initialization Functions">
+    ```python
+    from neurenix.tensor import Tensor
+    
+    # Zeros
+    zeros = Tensor.zeros((3, 4))
+    
+    # Ones
+    ones = Tensor.ones((2, 2))
+    
+    # Random normal distribution
+    randn = Tensor.randn((5, 5))
+    
+    # Random like another tensor
+    random_like = Tensor.randn_like(zeros)
+    ```
+  </Tab>
+  
+  <Tab title="With Device">
+    ```python
+    from neurenix.tensor import Tensor, DType
+    from neurenix.device import Device, DeviceType
+    
+    # Create on GPU
+    cuda_tensor = Tensor.randn(
+        (100, 100),
+        device=Device(DeviceType.CUDA, 0)
+    )
+    
+    # Create with specific dtype
+    int_tensor = Tensor.zeros(
+        (10, 10),
+        dtype=DType.INT32,
+        device=Device(DeviceType.CPU)
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Data Types
+
+Neurenix supports multiple data types through the `DType` enum:
+
+```python
+from neurenix.tensor import Tensor, DType
+
+# Available data types
+float32 = Tensor([1.0, 2.0], dtype=DType.FLOAT32)  # Default
+float64 = Tensor([1.0, 2.0], dtype=DType.FLOAT64)
+int32 = Tensor([1, 2], dtype=DType.INT32)
+int64 = Tensor([1, 2], dtype=DType.INT64)
+bool_tensor = Tensor([True, False], dtype=DType.BOOL)
+
+# Check tensor dtype
+print(float32.dtype)  # DType.FLOAT32
+```
+
+## Tensor Properties
+
+```python
+from neurenix.tensor import Tensor
+
+t = Tensor.randn((3, 4, 5))
+
+# Shape information
+print(t.shape)      # (3, 4, 5)
+print(t.ndim)       # 3
+print(t.size)       # 60
+
+# Device and dtype
+print(t.device)     # Device(CPU)
+print(t.dtype)      # DType.FLOAT32
+
+# Gradient tracking
+print(t.requires_grad)  # False
+print(t.grad)           # None
+```
+
+## Tensor Operations
+
+### Arithmetic Operations
+
+<CodeGroup>
+```python Element-wise
+from neurenix.tensor import Tensor
+
+a = Tensor([[1, 2], [3, 4]])
+b = Tensor([[5, 6], [7, 8]])
+
+# Addition
+c = a + b
+scalar_add = a + 10
+
+# Subtraction
+d = a - b
+
+# Multiplication
+e = a * b
+
+# Division
+f = a / b
+```
+
+```python Matrix Operations
+from neurenix.tensor import Tensor
+
+a = Tensor.randn((3, 4))
+b = Tensor.randn((4, 5))
+
+# Matrix multiplication
+result = a.matmul(b)  # Shape: (3, 5)
+
+# Transpose
+at = a.transpose(0, 1)  # Shape: (4, 3)
+```
+</CodeGroup>
+
+### Shape Manipulation
+
+```python
+from neurenix.tensor import Tensor
+
+x = Tensor.randn((2, 3, 4))
+
+# Reshape
+y = x.reshape(6, 4)        # Shape: (6, 4)
+z = x.reshape(2, -1)        # Shape: (2, 12), -1 inferred
+
+# Transpose specific dimensions
+t = x.transpose(0, 2)       # Shape: (4, 3, 2)
+
+# Indexing and slicing
+slice_tensor = x[0]         # First element along dim 0
+range_tensor = x[:, 1:, :]  # Slice middle dimension
+```
+
+### Aggregation Operations
+
+<Tabs>
+  <Tab title="Reduction">
+    ```python
+    from neurenix.tensor import Tensor
+    
+    x = Tensor([[1, 2, 3], [4, 5, 6]])
+    
+    # Mean
+    mean_all = x.mean()           # Scalar: 3.5
+    mean_dim0 = x.mean(dim=0)     # Shape: (3,)
+    mean_dim1 = x.mean(dim=1)     # Shape: (2,)
+    
+    # Sum
+    sum_all = x.sum()             # Scalar: 21
+    sum_keepdim = x.sum(dim=1, keepdim=True)  # Shape: (2, 1)
+    
+    # Absolute value
+    abs_x = x.abs()
+    ```
+  </Tab>
+  
+  <Tab title="Combining">
+    ```python
+    from neurenix.tensor import Tensor
+    
+    a = Tensor([[1, 2]])
+    b = Tensor([[3, 4]])
+    c = Tensor([[5, 6]])
+    
+    # Stack along new dimension
+    stacked = Tensor.stack([a, b, c], dim=0)  # Shape: (3, 1, 2)
+    
+    # Concatenate along existing dimension
+    concatenated = Tensor.cat([a, b, c], dim=0)  # Shape: (3, 2)
+    ```
+  </Tab>
+</Tabs>
+
+## Activation Functions
+
+Tensors have built-in activation functions:
+
+```python
+from neurenix.tensor import Tensor
+
+x = Tensor.randn((3, 3))
+
+# ReLU
+relu_out = x.relu()
+relu_inplace = x.relu(inplace=True)
+
+# Sigmoid
+sigmoid_out = x.sigmoid()
+
+# Tanh
+tanh_out = x.tanh()
+
+# Softmax
+logits = Tensor.randn((10, 5))
+probs = logits.softmax(dim=1)
+
+# Log softmax
+log_probs = logits.log_softmax(dim=1)
+```
+
+### Advanced Activations
+
+<CodeGroup>
+```python Leaky ReLU
+x = Tensor.randn((5, 5))
+leaky = x.leaky_relu(negative_slope=0.01)
+```
+
+```python ELU / SELU
+x = Tensor.randn((5, 5))
+
+# Exponential Linear Unit
+elu = x.elu(alpha=1.0)
+
+# Scaled ELU
+selu = x.selu()
+```
+
+```python GELU
+x = Tensor.randn((5, 5))
+
+# Exact GELU
+gelu_exact = x.gelu(approximate=False)
+
+# Approximate GELU (faster)
+gelu_approx = x.gelu(approximate=True)
+```
+</CodeGroup>
+
+## Device Management
+
+### Moving Tensors Between Devices
+
+```python
+from neurenix.tensor import Tensor
+from neurenix.device import Device, DeviceType
+
+# Create tensor on CPU
+cpu_tensor = Tensor.randn((100, 100))
+print(cpu_tensor.device)  # Device(CPU)
+
+# Move to GPU
+gpu_tensor = cpu_tensor.to(Device(DeviceType.CUDA, 0))
+print(gpu_tensor.device)  # Device(CUDA:0)
+
+# Move back to CPU
+back_to_cpu = gpu_tensor.to(Device(DeviceType.CPU))
+
+# Async transfer (non-blocking)
+async_gpu = cpu_tensor.to(
+    Device(DeviceType.CUDA, 0),
+    non_blocking=True
+)
+```
+
+<Info>
+The `to()` method creates a new tensor on the target device. For in-place device switching, use `hot_swap_device()`.
+</Info>
+
+### Hot-Swapping Devices
+
+```python
+from neurenix.tensor import Tensor
+from neurenix.device import Device, DeviceType
+
+tensor = Tensor.randn((50, 50))
+print(f"Original device: {tensor.device}")
+
+# In-place device swap (more efficient)
+tensor.hot_swap_device(Device(DeviceType.CUDA, 0))
+print(f"New device: {tensor.device}")
+```
+
+<Note>
+`hot_swap_device()` modifies the tensor in-place, which is more memory-efficient than creating a new tensor with `to()`.
+</Note>
+
+## NumPy Interoperability
+
+```python
+import numpy as np
+from neurenix.tensor import Tensor
+
+# Tensor to NumPy
+tensor = Tensor([[1, 2], [3, 4]])
+numpy_array = tensor.numpy()
+print(type(numpy_array))  # <class 'numpy.ndarray'>
+
+# NumPy to Tensor
+arr = np.random.randn(5, 5)
+tensor = Tensor(arr)
+```
+
+## Automatic Differentiation
+
+Enable gradient tracking for automatic differentiation:
+
+```python
+from neurenix.tensor import Tensor
+
+# Create tensor with gradient tracking
+x = Tensor([[1.0, 2.0], [3.0, 4.0]], requires_grad=True)
+y = Tensor([[2.0, 1.0], [1.0, 2.0]], requires_grad=True)
+
+# Forward pass
+z = x * y
+loss = z.sum()
+
+# Backward pass
+loss.backward()
+
+# Access gradients
+print(x.grad)
+print(y.grad)
+```
+
+### Gradient Context Managers
+
+```python
+from neurenix.tensor import Tensor
+
+x = Tensor.randn((10, 10), requires_grad=True)
+
+# Disable gradient computation
+with Tensor.no_grad():
+    y = x * 2  # y.requires_grad is False
+    z = y + 1  # No gradient tracking
+```
+
+## Advanced Tensor Operations
+
+### Gather Operation
+
+```python
+from neurenix.tensor import Tensor
+
+# Source tensor
+src = Tensor([[1, 2, 3], [4, 5, 6]])
+
+# Indices to gather
+indices = Tensor([[0, 2], [1, 0]], dtype="int64")
+
+# Gather along dimension 1
+result = src.gather(dim=1, index=indices)
+print(result)  # [[1, 3], [5, 4]]
+```
+
+### Cloning and Clamping
+
+<CodeGroup>
+```python Clone
+from neurenix.tensor import Tensor
+
+original = Tensor.randn((3, 3))
+cloned = original.clone()
+
+# Modifying cloned doesn't affect original
+cloned = cloned * 2
+```
+
+```python Clamp
+from neurenix.tensor import Tensor
+
+x = Tensor.randn((5, 5))
+
+# Clamp values to range [-1, 1]
+clamped = x.clamp(min=-1.0, max=1.0)
+
+# Clamp with only min
+min_clamped = x.clamp(min=0.0)
+
+# Clamp with only max
+max_clamped = x.clamp(max=0.0)
+```
+</CodeGroup>
+
+## Static Methods
+
+```python
+from neurenix.tensor import Tensor
+
+x = Tensor.randn((3, 3))
+
+# Element-wise exponential
+exp_x = Tensor.exp(x)
+
+# Sum with static method
+total = Tensor.sum(x, dim=0)
+
+# Random like
+similar = Tensor.randn_like(x)
+```
+
+## Performance Tips
+
+<CardGroup cols={2}>
+  <Card title="Use In-Place Operations" icon="bolt">
+    Methods like `relu(inplace=True)` modify tensors in-place, saving memory
+  </Card>
+  
+  <Card title="Batch Operations" icon="layer-group">
+    Operate on batched tensors instead of loops for better performance
+  </Card>
+  
+  <Card title="Device Placement" icon="microchip">
+    Create tensors on the target device to avoid unnecessary transfers
+  </Card>
+  
+  <Card title="Disable Gradients" icon="ban">
+    Use `Tensor.no_grad()` during inference to reduce memory usage
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Training Loop
+
+```python
+from neurenix.tensor import Tensor
+from neurenix.device import Device, DeviceType
+
+# Setup
+device = Device(DeviceType.CUDA, 0)
+model = MyModel().to(device)
+optimizer = Adam(model.parameters())
+
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        # Move data to device
+        inputs = Tensor(batch['input'], device=device)
+        targets = Tensor(batch['target'], device=device)
+        
+        # Forward pass
+        outputs = model(inputs)
+        loss = loss_fn(outputs, targets)
+        
+        # Backward pass
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+```
+
+### Inference
+
+```python
+from neurenix.tensor import Tensor
+
+model.eval()  # Set to evaluation mode
+
+with Tensor.no_grad():
+    output = model(input_tensor)
+    predictions = output.softmax(dim=1)
+```
+
+## API Reference Summary
+
+| Method | Description |
+|--------|-------------|
+| `Tensor(data, ...)` | Create tensor from data |
+| `Tensor.zeros(shape)` | Create tensor filled with zeros |
+| `Tensor.ones(shape)` | Create tensor filled with ones |
+| `Tensor.randn(shape)` | Create tensor with random normal values |
+| `.to(device)` | Move tensor to device (creates new tensor) |
+| `.hot_swap_device(device)` | Move tensor to device (in-place) |
+| `.numpy()` | Convert to NumPy array |
+| `.reshape(shape)` | Reshape tensor |
+| `.transpose(dim0, dim1)` | Transpose dimensions |
+| `.matmul(other)` | Matrix multiplication |
+| `.mean(dim)` | Compute mean |
+| `.sum(dim)` | Compute sum |
+| `.backward()` | Compute gradients |
+
+## Related Documentation
+
+- [Architecture](/core/architecture) - Understanding device management
+- [Devices](/core/devices) - Device types and hardware detection
+- [Neural Networks](/core/neural-networks) - Building models with tensors

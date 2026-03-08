@@ -1,0 +1,222 @@
+---
+title: 'Device'
+description: 'Hardware device abstraction for tensor operations'
+---
+
+## Overview
+
+The `Device` class abstracts computational hardware, allowing Neurenix to run on various platforms including CPU, CUDA, ROCm, TPU, NPU, WebGPU, and more.
+
+## DeviceType Enum
+
+```python
+class DeviceType(Enum):
+    CPU = "cpu"
+    CUDA = "cuda"
+    ROCM = "rocm"
+    WEBGPU = "webgpu"
+    TPU = "tpu"
+    NPU = "npu"
+    VULKAN = "vulkan"
+    OPENCL = "opencl"
+    ONEAPI = "oneapi"
+    DIRECTML = "directml"
+    ONEDNN = "onednn"
+    MKLDNN = "mkldnn"
+    TENSORRT = "tensorrt"
+    QUANTUM = "quantum"
+    ARM = "arm"
+```
+
+## Device Class
+
+```python
+class Device:
+    def __init__(self, device_type: DeviceType, index: int = 0)
+```
+
+### Parameters
+
+<ParamField path="device_type" type="DeviceType" required>
+  The type of the device (CPU, CUDA, TPU, etc.).
+</ParamField>
+
+<ParamField path="index" type="int" default="0">
+  The index of the device (for multiple devices of the same type).
+</ParamField>
+
+## Properties
+
+### type
+
+```python
+@property
+def type(self) -> DeviceType
+```
+
+Get the type of the device.
+
+<ResponseField name="return" type="DeviceType">
+  The device type.
+</ResponseField>
+
+### index
+
+```python
+@property
+def index(self) -> int
+```
+
+Get the index of the device.
+
+### name
+
+```python
+@property
+def name(self) -> str
+```
+
+Get the name of the device.
+
+<ResponseField name="return" type="str">
+  Device name string (e.g., "CUDA:0", "CPU").
+</ResponseField>
+
+## Class Methods
+
+### device_count
+
+```python
+@classmethod
+def device_count(cls) -> int
+```
+
+Get the total number of devices available.
+
+<ResponseField name="return" type="int">
+  The total number of devices available.
+</ResponseField>
+
+## Module Functions
+
+### get_device
+
+```python
+def get_device(device_str: str) -> Device
+```
+
+Get a device from a string representation.
+
+<ParamField path="device_str" type="str" required>
+  String representation of the device (e.g., 'cpu', 'cuda:0', 'tpu:1').
+</ParamField>
+
+<ResponseField name="return" type="Device">
+  The corresponding device object.
+</ResponseField>
+
+### get_device_count
+
+```python
+def get_device_count(device_type: DeviceType) -> int
+```
+
+Get the number of devices of the given type.
+
+<ParamField path="device_type" type="DeviceType" required>
+  The type of device to count.
+</ParamField>
+
+<ResponseField name="return" type="int">
+  The number of devices of the given type.
+</ResponseField>
+
+### get_available_devices
+
+```python
+def get_available_devices() -> List[Device]
+```
+
+Get a list of all available devices.
+
+<ResponseField name="return" type="List[Device]">
+  A list of available devices.
+</ResponseField>
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.device import Device, DeviceType, get_device, get_available_devices
+
+# Create a CPU device
+cpu = Device(DeviceType.CPU)
+print(cpu.name)  # "CPU"
+
+# Create a CUDA device
+cuda = Device(DeviceType.CUDA, index=0)
+print(cuda.name)  # "CUDA:0"
+
+# Create a TPU device
+tpu = Device(DeviceType.TPU, index=0)
+
+# Get device from string
+device = get_device("cuda:1")
+print(device.type)  # DeviceType.CUDA
+print(device.index)  # 1
+
+# Get available devices
+devices = get_available_devices()
+for dev in devices:
+    print(f"Available: {dev.name}")
+
+# Get device count
+cuda_count = get_device_count(DeviceType.CUDA)
+print(f"CUDA devices: {cuda_count}")
+
+# Use device with tensors
+tensor = nx.Tensor([1, 2, 3], device=cuda)
+print(tensor.device.name)  # "CUDA:0"
+
+# Move tensor to different device
+tensor_cpu = tensor.to(cpu)
+print(tensor_cpu.device.name)  # "CPU"
+
+# Create WebGPU device for edge deployment
+webgpu = Device(DeviceType.WEBGPU, index=0)
+
+# Create NPU device for mobile AI
+npu = Device(DeviceType.NPU, index=0)
+```
+
+## Supported Devices
+
+<CardGroup cols={3}>
+  <Card title="CPU" icon="microchip">
+    Standard CPU execution
+  </Card>
+  <Card title="CUDA" icon="gpu">
+    NVIDIA GPU acceleration
+  </Card>
+  <Card title="ROCm" icon="gpu">
+    AMD GPU acceleration
+  </Card>
+  <Card title="TPU" icon="chip">
+    Google Tensor Processing Units
+  </Card>
+  <Card title="NPU" icon="brain">
+    Neural Processing Units
+  </Card>
+  <Card title="WebGPU" icon="globe">
+    Browser-based GPU acceleration
+  </Card>
+  <Card title="Vulkan" icon="layer-group">
+    Cross-platform GPU API
+  </Card>
+  <Card title="OpenCL" icon="project-diagram">
+    Open Computing Language
+  </Card>
+  <Card title="oneAPI" icon="infinity">
+    Intel unified programming model
+  </Card>
+</CardGroup>

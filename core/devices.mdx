@@ -1,0 +1,457 @@
+---
+title: Devices
+description: Hardware abstraction layer for CPU, GPU, TPU, and specialized accelerators
+---
+
+## Overview
+
+The `Device` class abstracts computational hardware, allowing tensors and models to run on different devices without code changes. Neurenix automatically detects available hardware and provides a unified API across all backends.
+
+```python
+from neurenix.device import Device, DeviceType, get_available_devices
+
+# Create device instances
+cpu = Device(DeviceType.CPU)
+gpu = Device(DeviceType.CUDA, 0)  # First CUDA GPU
+tpu = Device(DeviceType.TPU, 0)   # First TPU
+
+# List all available devices
+devices = get_available_devices()
+for device in devices:
+    print(device)
+```
+
+## Device Types
+
+Neurenix supports a comprehensive range of hardware backends through the `DeviceType` enum:
+
+<Tabs>
+  <Tab title="General Purpose">
+    ```python
+    from neurenix.device import Device, DeviceType
+    
+    # CPU - Always available
+    cpu = Device(DeviceType.CPU)
+    
+    # NVIDIA CUDA - For NVIDIA GPUs
+    cuda = Device(DeviceType.CUDA, 0)
+    
+    # AMD ROCm - For AMD GPUs
+    rocm = Device(DeviceType.ROCM, 0)
+    
+    # Google TPU - For Cloud TPU
+    tpu = Device(DeviceType.TPU, 0)
+    ```
+  </Tab>
+  
+  <Tab title="Cross-Platform">
+    ```python
+    from neurenix.device import Device, DeviceType
+    
+    # Vulkan - Cross-platform GPU compute
+    vulkan = Device(DeviceType.VULKAN, 0)
+    
+    # OpenCL - Heterogeneous computing
+    opencl = Device(DeviceType.OPENCL, 0)
+    
+    # Intel oneAPI - Intel hardware
+    oneapi = Device(DeviceType.ONEAPI, 0)
+    
+    # DirectML - Windows ML acceleration
+    directml = Device(DeviceType.DIRECTML, 0)
+    ```
+  </Tab>
+  
+  <Tab title="Specialized">
+    ```python
+    from neurenix.device import Device, DeviceType
+    
+    # WebGPU - Browser-based compute
+    webgpu = Device(DeviceType.WEBGPU, 0)
+    
+    # NVIDIA TensorRT - Optimized inference
+    tensorrt = Device(DeviceType.TENSORRT, 0)
+    
+    # NPU - Neural Processing Unit
+    npu = Device(DeviceType.NPU, 0)
+    
+    # ARM - ARM CPUs with NEON/SVE
+    arm = Device(DeviceType.ARM, 0)
+    
+    # oneDNN/MKL-DNN - Optimized primitives
+    onednn = Device(DeviceType.ONEDNN, 0)
+    ```
+  </Tab>
+</Tabs>
+
+## Creating Devices
+
+### From DeviceType
+
+```python
+from neurenix.device import Device, DeviceType
+
+# Create with default index (0)
+cpu = Device(DeviceType.CPU)
+cuda_0 = Device(DeviceType.CUDA)  # Equivalent to CUDA:0
+
+# Create with specific index
+cuda_1 = Device(DeviceType.CUDA, 1)  # Second GPU
+cuda_2 = Device(DeviceType.CUDA, 2)  # Third GPU
+```
+
+### From String
+
+```python
+from neurenix.device import get_device
+
+# Parse device strings
+cpu = get_device("cpu")
+cuda_0 = get_device("cuda:0")
+cuda_1 = get_device("cuda:1")
+tpu = get_device("tpu:0")
+rocm = get_device("rocm:0")
+```
+
+<Info>
+Device strings follow the format `type:index`, where the index defaults to 0 if omitted.
+</Info>
+
+## Device Properties
+
+```python
+from neurenix.device import Device, DeviceType
+
+device = Device(DeviceType.CUDA, 1)
+
+# Get device type
+print(device.type)        # DeviceType.CUDA
+
+# Get device index
+print(device.index)       # 1
+
+# Get device name
+print(device.name)        # "CUDA:1"
+
+# String representation
+print(repr(device))       # "Device(CUDA:1)"
+print(str(device))        # "Device(CUDA:1)"
+```
+
+## Hardware Detection
+
+### Checking Device Availability
+
+```python
+from neurenix.device import get_device_count, DeviceType
+
+# Count devices by type
+cuda_count = get_device_count(DeviceType.CUDA)
+rocm_count = get_device_count(DeviceType.ROCM)
+tpu_count = get_device_count(DeviceType.TPU)
+
+print(f"CUDA devices: {cuda_count}")
+print(f"ROCm devices: {rocm_count}")
+print(f"TPU devices: {tpu_count}")
+```
+
+### Listing Available Devices
+
+<CodeGroup>
+```python All Devices
+from neurenix.device import get_available_devices
+
+devices = get_available_devices()
+
+print(f"Found {len(devices)} devices:")
+for device in devices:
+    print(f"  - {device.name}")
+```
+
+```python By Type
+from neurenix.device import get_available_devices, DeviceType
+
+all_devices = get_available_devices()
+
+# Filter by type
+cuda_devices = [d for d in all_devices if d.type == DeviceType.CUDA]
+tpu_devices = [d for d in all_devices if d.type == DeviceType.TPU]
+
+print(f"CUDA: {[d.name for d in cuda_devices]}")
+print(f"TPU: {[d.name for d in tpu_devices]}")
+```
+</CodeGroup>
+
+### Total Device Count
+
+```python
+from neurenix.device import Device
+
+total = Device.device_count()
+print(f"Total devices available: {total}")
+```
+
+## Using Devices with Tensors
+
+### Creating Tensors on Specific Devices
+
+```python
+from neurenix.tensor import Tensor
+from neurenix.device import Device, DeviceType
+
+# Create directly on GPU
+gpu_tensor = Tensor.randn((100, 100), device=Device(DeviceType.CUDA, 0))
+
+# Create on CPU then move to GPU
+cpu_tensor = Tensor.randn((100, 100))
+gpu_tensor = cpu_tensor.to(Device(DeviceType.CUDA, 0))
+
+# Create on TPU
+tpu_tensor = Tensor.zeros((50, 50), device=Device(DeviceType.TPU, 0))
+```
+
+### Moving Between Devices
+
+<Tabs>
+  <Tab title="Standard Transfer">
+    ```python
+    from neurenix.tensor import Tensor
+    from neurenix.device import Device, DeviceType
+    
+    # Create on CPU
+    tensor = Tensor.randn((1000, 1000))
+    
+    # Move to GPU (creates new tensor)
+    gpu_tensor = tensor.to(Device(DeviceType.CUDA, 0))
+    
+    # Move to different GPU
+    gpu1_tensor = gpu_tensor.to(Device(DeviceType.CUDA, 1))
+    
+    # Move back to CPU
+    cpu_tensor = gpu1_tensor.to(Device(DeviceType.CPU))
+    ```
+  </Tab>
+  
+  <Tab title="Hot-Swap (In-Place)">
+    ```python
+    from neurenix.tensor import Tensor
+    from neurenix.device import Device, DeviceType
+    
+    # Create tensor
+    tensor = Tensor.randn((1000, 1000))
+    print(f"Initial: {tensor.device}")
+    
+    # Hot-swap to GPU (modifies in-place)
+    tensor.hot_swap_device(Device(DeviceType.CUDA, 0))
+    print(f"After swap: {tensor.device}")
+    
+    # More memory efficient than .to()
+    ```
+  </Tab>
+  
+  <Tab title="Async Transfer">
+    ```python
+    from neurenix.tensor import Tensor
+    from neurenix.device import Device, DeviceType
+    
+    tensor = Tensor.randn((1000, 1000))
+    
+    # Non-blocking transfer (async)
+    gpu_tensor = tensor.to(
+        Device(DeviceType.CUDA, 0),
+        non_blocking=True
+    )
+    
+    # Continue with other operations
+    # GPU transfer happens in background
+    ```
+  </Tab>
+</Tabs>
+
+## Device-Specific Features
+
+### CUDA Devices
+
+```python
+from neurenix.device import Device, DeviceType, get_device_count
+from neurenix.device_manager import DeviceManager
+
+# Check CUDA availability
+if get_device_count(DeviceType.CUDA) > 0:
+    device = Device(DeviceType.CUDA, 0)
+    
+    # Get memory statistics
+    manager = DeviceManager()
+    stats = manager.get_memory_stats(device)
+    
+    print(f"Total GPU memory: {stats['total'] / 1e9:.2f} GB")
+    print(f"Available: {stats['available'] / 1e9:.2f} GB")
+    print(f"Used: {stats['used'] / 1e9:.2f} GB")
+```
+
+### WebGPU for Browser Deployment
+
+```python
+from neurenix.device import Device, DeviceType, get_device_count
+
+# Check WebGPU availability (in WebAssembly context)
+if get_device_count(DeviceType.WEBGPU) > 0:
+    webgpu = Device(DeviceType.WEBGPU, 0)
+    
+    # Run inference in browser
+    from neurenix.tensor import Tensor
+    
+    model = load_model()
+    model.to(webgpu)
+    
+    input_tensor = Tensor(input_data, device=webgpu)
+    output = model(input_tensor)
+```
+
+<Note>
+WebGPU support is automatically detected when running in a WebAssembly environment with GPU access.
+</Note>
+
+### TPU Devices
+
+```python
+from neurenix.device import Device, DeviceType, get_device_count
+from neurenix.tensor import Tensor
+
+# TPUs are optimized for large batch inference
+if get_device_count(DeviceType.TPU) > 0:
+    tpu = Device(DeviceType.TPU, 0)
+    
+    # Large batch processing
+    batch = Tensor.randn((1024, 512), device=tpu)
+    model = MyModel().to(tpu)
+    
+    predictions = model(batch)
+```
+
+## Device Comparison
+
+```python
+from neurenix.device import Device, DeviceType
+
+cuda_0 = Device(DeviceType.CUDA, 0)
+cuda_1 = Device(DeviceType.CUDA, 1)
+cpu = Device(DeviceType.CPU)
+
+# Device equality
+print(cuda_0 == cuda_0)  # True
+print(cuda_0 == cuda_1)  # False (different index)
+print(cuda_0 == cpu)     # False (different type)
+
+# Devices are hashable
+device_set = {cuda_0, cuda_1, cpu}
+device_dict = {cuda_0: "GPU 0", cuda_1: "GPU 1"}
+```
+
+## Multi-Device Training
+
+Distribute workload across multiple devices:
+
+```python
+from neurenix.device import Device, DeviceType, get_device_count
+from neurenix.tensor import Tensor
+
+# Get all available CUDA devices
+num_gpus = get_device_count(DeviceType.CUDA)
+gpus = [Device(DeviceType.CUDA, i) for i in range(num_gpus)]
+
+if len(gpus) > 1:
+    # Split batch across GPUs
+    batch_size_per_gpu = total_batch_size // len(gpus)
+    
+    models = [model.clone().to(gpu) for gpu in gpus]
+    
+    for i, (gpu, model) in enumerate(zip(gpus, models)):
+        start_idx = i * batch_size_per_gpu
+        end_idx = start_idx + batch_size_per_gpu
+        
+        batch = Tensor(data[start_idx:end_idx], device=gpu)
+        output = model(batch)
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Availability" icon="magnifying-glass">
+    Always check device availability before use with `get_device_count()`
+  </Card>
+  
+  <Card title="Consistent Device Placement" icon="layer-group">
+    Keep tensors and models on the same device to avoid transfer overhead
+  </Card>
+  
+  <Card title="Use Genesis" icon="brain">
+    Let the Genesis system handle device selection for optimal performance
+  </Card>
+  
+  <Card title="Profile Memory" icon="chart-line">
+    Monitor GPU memory usage with `DeviceManager.get_memory_stats()`
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Automatic Fallback
+
+```python
+from neurenix.device import Device, DeviceType, get_device_count
+
+# Try GPU, fallback to CPU
+if get_device_count(DeviceType.CUDA) > 0:
+    device = Device(DeviceType.CUDA, 0)
+elif get_device_count(DeviceType.ROCM) > 0:
+    device = Device(DeviceType.ROCM, 0)
+else:
+    device = Device(DeviceType.CPU)
+
+print(f"Using device: {device}")
+```
+
+### Device-Agnostic Code
+
+```python
+from neurenix.device_manager import Genesis
+from neurenix.tensor import Tensor
+
+# Let Genesis select the best device
+genesis = Genesis()
+device = genesis.select_device(workload_type="training")
+
+# All subsequent operations use the selected device
+model = MyModel().to(device)
+data = Tensor(training_data, device=device)
+targets = Tensor(labels, device=device)
+
+output = model(data)
+loss = loss_fn(output, targets)
+```
+
+## API Reference
+
+| Class/Function | Description |
+|----------------|-------------|
+| `Device(type, index)` | Create a device instance |
+| `DeviceType` | Enum of supported device types |
+| `get_device(str)` | Parse device from string |
+| `get_device_count(type)` | Count devices of a specific type |
+| `get_available_devices()` | List all available devices |
+| `Device.device_count()` | Get total number of devices |
+
+### Device Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `.type` | `DeviceType` | The device type |
+| `.index` | `int` | The device index |
+| `.name` | `str` | Human-readable device name |
+
+## Related Documentation
+
+- [Architecture](/core/architecture) - Hot-swappable backends and Genesis system
+- [Tensors](/core/tensors) - Creating and moving tensors across devices
+- [Neural Networks](/core/neural-networks) - Moving models to devices

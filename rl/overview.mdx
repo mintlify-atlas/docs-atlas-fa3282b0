@@ -1,0 +1,231 @@
+---
+title: 'Reinforcement Learning'
+description: 'Train intelligent agents with Neurenix RL module'
+---
+
+## Introduction
+
+The Neurenix RL module provides a comprehensive framework for reinforcement learning, enabling you to train intelligent agents that learn from interaction with environments. The module implements state-of-the-art algorithms including DQN, PPO, SAC, A2C, and DDPG.
+
+## Key Features
+
+- **Modern Algorithms**: DQN, PPO, SAC, A2C, DDPG implementations
+- **Flexible Policies**: Support for discrete and continuous action spaces
+- **Value Functions**: Q-functions, value networks, and advantage functions
+- **Experience Replay**: Efficient memory-based learning
+- **Multi-Agent Systems**: Support for multi-agent reinforcement learning
+- **Custom Environments**: Easy-to-use environment interface
+
+## Quick Start
+
+```python
+from neurenix.rl import DQN, Environment
+import numpy as np
+
+# Define environment spaces
+observation_space = {
+    "type": "box",
+    "shape": (4,),
+    "dim": 4
+}
+
+action_space = {
+    "type": "discrete",
+    "n": 2
+}
+
+# Create DQN agent
+agent = DQN(
+    observation_space=observation_space,
+    action_space=action_space,
+    learning_rate=0.001,
+    gamma=0.99,
+    epsilon_start=1.0,
+    epsilon_end=0.01,
+    buffer_size=10000,
+    batch_size=64
+)
+
+# Train the agent
+metrics = agent.train(
+    env=env,
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+## Core Components
+
+### Agents
+
+Agents are the learning entities that interact with environments:
+
+```python
+from neurenix.rl.agent import Agent
+
+agent = Agent(
+    policy=policy,
+    value_function=value_function,
+    gamma=0.99,
+    name="MyAgent"
+)
+```
+
+**Source**: `neurenix/rl/agent.py:18`
+
+### Environments
+
+Environments define the world in which agents operate:
+
+```python
+from neurenix.rl.environment import Environment, GridWorld
+
+# Use built-in GridWorld
+env = GridWorld(
+    width=10,
+    height=10,
+    max_steps=100,
+    obstacle_density=0.2
+)
+
+# Or create custom environment
+class CustomEnv(Environment):
+    def _reset_state(self):
+        return np.zeros(4)
+    
+    def _step(self, action):
+        next_state = self.state + action
+        reward = -np.sum(np.abs(next_state))
+        done = reward > -0.1
+        return next_state, reward, done, {}
+```
+
+**Source**: `neurenix/rl/environment.py:15`
+
+### Policies
+
+Policies map states to actions:
+
+```python
+from neurenix.rl.policy import (
+    RandomPolicy,
+    GreedyPolicy,
+    EpsilonGreedyPolicy,
+    GaussianPolicy
+)
+
+# Epsilon-greedy for exploration
+policy = EpsilonGreedyPolicy(
+    value_function=q_network,
+    action_space=action_space,
+    epsilon_start=1.0,
+    epsilon_end=0.01,
+    epsilon_decay=0.995
+)
+```
+
+**Source**: `neurenix/rl/policy.py:174`
+
+### Value Functions
+
+Value functions estimate the value of states or state-action pairs:
+
+```python
+from neurenix.rl.value import QFunction, ValueNetworkFunction
+
+# Q-function for state-action values
+q_function = QFunction(
+    q_network=network,
+    target_network=target_network,
+    optimizer=optimizer,
+    observation_space=obs_space,
+    action_space=action_space
+)
+```
+
+**Source**: `neurenix/rl/value.py:101`
+
+## Training Loop
+
+The standard training loop follows this pattern:
+
+```python
+# Reset environment
+state = env.reset()
+episode_reward = 0
+
+while not done:
+    # Select action
+    action = agent.act(state)
+    
+    # Take action
+    next_state, reward, done, info = env.step(action)
+    
+    # Update agent
+    metrics = agent.update(state, action, reward, next_state, done)
+    
+    # Accumulate reward
+    episode_reward += reward
+    state = next_state
+```
+
+**Source**: `neurenix/rl/agent.py:99`
+
+## Multi-Agent Systems
+
+Support for multiple agents in shared environments:
+
+```python
+from neurenix.rl.agent import MultiAgentSystem
+
+# Create multiple agents
+agents = [agent1, agent2, agent3]
+
+# Create multi-agent system
+mas = MultiAgentSystem(
+    agents=agents,
+    env=multi_agent_env,
+    name="Cooperative"
+)
+
+# Train all agents
+metrics = mas.train(
+    episodes=1000,
+    max_steps=200,
+    verbose=True
+)
+```
+
+**Source**: `neurenix/rl/agent.py:393`
+
+## Saving and Loading
+
+Persist trained agents for later use:
+
+```python
+# Save agent
+agent.save("models/my_agent")
+
+# Load agent
+agent.load("models/my_agent")
+```
+
+**Source**: `neurenix/rl/agent.py:189`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Policies" icon="map" href="/rl/policies">
+    Learn about different policy types
+  </Card>
+  <Card title="Algorithms" icon="brain" href="/rl/algorithms">
+    Explore RL algorithms
+  </Card>
+  <Card title="Training" icon="chart-line" href="/rl/training">
+    Master training techniques
+  </Card>
+  <Card title="Algorithms" icon="brain" href="/rl/algorithms">
+    Explore RL algorithms
+  </Card>
+</CardGroup>

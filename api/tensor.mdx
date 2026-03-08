@@ -1,0 +1,373 @@
+---
+title: 'Tensor'
+description: 'Multi-dimensional array with hardware acceleration support'
+---
+
+## Overview
+
+The `Tensor` class is the fundamental data structure in Neurenix, similar to tensors in PyTorch or TensorFlow. It provides a multi-dimensional array with automatic device management and gradient tracking.
+
+## Class Definition
+
+```python
+class Tensor:
+    def __init__(
+        self,
+        data: Union[np.ndarray, List, Tuple, Tensor, None] = None,
+        shape: Optional[Sequence[int]] = None,
+        dtype: Optional[Union[DType, str]] = None,
+        device: Optional[Device] = None,
+        requires_grad: bool = False,
+    )
+```
+
+### Parameters
+
+<ParamField path="data" type="Union[np.ndarray, List, Tuple, Tensor, None]">
+  The data to initialize the tensor with. Can be a NumPy array, a list, a tuple, another Tensor, or None (for uninitialized tensor).
+</ParamField>
+
+<ParamField path="shape" type="Optional[Sequence[int]]">
+  The shape of the tensor. If None, inferred from data.
+</ParamField>
+
+<ParamField path="dtype" type="Optional[Union[DType, str]]">
+  The data type of the tensor. If None, inferred from data. Options: 'float32', 'float64', 'int32', 'int64', 'bool'.
+</ParamField>
+
+<ParamField path="device" type="Optional[Device]">
+  The device to store the tensor on. If None, uses the default device.
+</ParamField>
+
+<ParamField path="requires_grad" type="bool" default="False">
+  Whether to track gradients for this tensor.
+</ParamField>
+
+## Properties
+
+### shape
+
+```python
+@property
+def shape(self) -> Tuple[int, ...]
+```
+
+Get the shape of the tensor.
+
+<ResponseField name="return" type="Tuple[int, ...]">
+  The shape of the tensor as a tuple of integers.
+</ResponseField>
+
+### dtype
+
+```python
+@property
+def dtype(self) -> DType
+```
+
+Get the data type of the tensor.
+
+### device
+
+```python
+@property
+def device(self) -> Device
+```
+
+Get the device where the tensor is stored.
+
+### requires_grad
+
+```python
+@property
+def requires_grad(self) -> bool
+```
+
+Check if the tensor requires gradients.
+
+### grad
+
+```python
+@property
+def grad(self) -> Optional[Tensor]
+```
+
+Get the gradient of the tensor.
+
+## Methods
+
+### numpy
+
+```python
+def numpy(self) -> np.ndarray
+```
+
+Convert the tensor to a NumPy array. This operation will copy the tensor data from the device to the CPU if necessary.
+
+<ResponseField name="return" type="np.ndarray">
+  A NumPy array with the tensor data.
+</ResponseField>
+
+### to
+
+```python
+def to(self, device: Device, non_blocking: bool = False) -> Tensor
+```
+
+Move the tensor to the specified device.
+
+<ParamField path="device" type="Device">
+  The target device.
+</ParamField>
+
+<ParamField path="non_blocking" type="bool" default="False">
+  If True, the copy will be performed asynchronously. Only has an effect for CUDA/ROCm devices.
+</ParamField>
+
+<ResponseField name="return" type="Tensor">
+  A new tensor on the target device.
+</ResponseField>
+
+### hot_swap_device
+
+```python
+def hot_swap_device(self, device: Device) -> None
+```
+
+Hot-swap the tensor to a different device without creating a new tensor. This method changes the device of the tensor in-place.
+
+### reshape
+
+```python
+def reshape(self, *shape) -> Tensor
+```
+
+Reshape the tensor to the given shape.
+
+<ParamField path="shape" type="*args">
+  The new shape of the tensor.
+</ParamField>
+
+<ResponseField name="return" type="Tensor">
+  A new tensor with the given shape.
+</ResponseField>
+
+### transpose
+
+```python
+def transpose(self, dim0: int = 0, dim1: int = 1) -> Tensor
+```
+
+Transpose the tensor along the given dimensions.
+
+### matmul
+
+```python
+def matmul(self, other: Tensor) -> Tensor
+```
+
+Matrix multiplication with another tensor.
+
+### mean
+
+```python
+def mean(self, dim: Optional[int] = None, keepdim: bool = False) -> Tensor
+```
+
+Compute the mean along the specified dimension.
+
+### sum
+
+```python
+def sum(self, dim: Optional[int] = None, keepdim: bool = False) -> Tensor
+```
+
+Compute the sum along the specified dimension.
+
+### clone
+
+```python
+def clone(self) -> Tensor
+```
+
+Create a clone of this tensor.
+
+### backward
+
+```python
+def backward(self)
+```
+
+Compute gradients through the computation graph.
+
+## Activation Functions
+
+### relu
+
+```python
+def relu(self, inplace: bool = False) -> Tensor
+```
+
+Apply the rectified linear unit function element-wise.
+
+### sigmoid
+
+```python
+def sigmoid(self) -> Tensor
+```
+
+Apply the sigmoid function element-wise.
+
+### tanh
+
+```python
+def tanh(self) -> Tensor
+```
+
+Apply the hyperbolic tangent function element-wise.
+
+### softmax
+
+```python
+def softmax(self, dim: int = -1) -> Tensor
+```
+
+Apply the softmax function along the specified dimension.
+
+### log_softmax
+
+```python
+def log_softmax(self, dim: int = -1) -> Tensor
+```
+
+Apply the log softmax function along the specified dimension.
+
+### leaky_relu
+
+```python
+def leaky_relu(self, negative_slope: float = 0.01, inplace: bool = False) -> Tensor
+```
+
+Apply the leaky rectified linear unit function element-wise.
+
+### gelu
+
+```python
+def gelu(self, approximate: bool = False) -> Tensor
+```
+
+Apply the Gaussian error linear unit function element-wise.
+
+## Static Methods
+
+### zeros
+
+```python
+@staticmethod
+def zeros(
+    shape: Sequence[int],
+    dtype: Optional[DType] = None,
+    device: Optional[Device] = None,
+    requires_grad: bool = False
+) -> Tensor
+```
+
+Create a tensor filled with zeros.
+
+### ones
+
+```python
+@staticmethod
+def ones(
+    shape: Sequence[int],
+    dtype: Optional[DType] = None,
+    device: Optional[Device] = None,
+    requires_grad: bool = False
+) -> Tensor
+```
+
+Create a tensor filled with ones.
+
+### randn
+
+```python
+@staticmethod
+def randn(
+    shape: Sequence[int],
+    dtype: Optional[DType] = None,
+    device: Optional[Device] = None,
+    requires_grad: bool = False
+) -> Tensor
+```
+
+Create a tensor filled with random numbers from a normal distribution.
+
+### stack
+
+```python
+@staticmethod
+def stack(tensors: List[Tensor], dim: int = 0) -> Tensor
+```
+
+Stack tensors along a new dimension.
+
+### cat
+
+```python
+@staticmethod
+def cat(tensors: List[Tensor], dim: int = 0) -> Tensor
+```
+
+Concatenate tensors along an existing dimension.
+
+### no_grad
+
+```python
+@staticmethod
+@contextmanager
+def no_grad()
+```
+
+Context manager to disable gradient computation.
+
+## Example Usage
+
+```python
+import neurenix as nx
+
+# Create a tensor from a list
+x = nx.Tensor([[1, 2, 3], [4, 5, 6]])
+print(x.shape)  # (2, 3)
+
+# Create a tensor with zeros
+zeros = nx.Tensor.zeros((3, 4), dtype=nx.DType.FLOAT32)
+
+# Create a random tensor
+rand = nx.Tensor.randn((2, 3, 4))
+
+# Reshape a tensor
+reshaped = x.reshape(3, 2)
+
+# Apply activation functions
+activated = x.relu()
+softmax_output = x.softmax(dim=1)
+
+# Matrix multiplication
+y = nx.Tensor.randn((3, 5))
+result = x.matmul(y)
+
+# Move to device
+device = nx.Device(nx.DeviceType.CUDA, 0)
+x_cuda = x.to(device)
+
+# Gradient tracking
+x = nx.Tensor([1.0, 2.0, 3.0], requires_grad=True)
+y = x * 2
+z = y.sum()
+z.backward()
+print(x.grad)  # Gradients
+
+# Context manager for inference
+with nx.Tensor.no_grad():
+    prediction = model(input_tensor)
+```

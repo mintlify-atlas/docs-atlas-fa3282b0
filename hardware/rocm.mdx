@@ -1,0 +1,495 @@
+---
+title: ROCm Support
+description: AMD GPU acceleration with ROCm/HIP in Neurenix AI framework
+---
+
+## Overview
+
+Neurenix provides full support for AMD GPUs through ROCm (Radeon Open Compute), enabling high-performance deep learning on AMD hardware. The framework uses HIP (Heterogeneous Interface for Portability) for GPU operations and includes:
+
+- HIP for GPU compute operations
+- rocBLAS for accelerated linear algebra
+- MIOpen for optimized neural network primitives
+- rocSOLVER for numerical algorithms
+- Multi-GPU support via RCCL
+
+## Requirements
+
+- AMD GPU (Radeon Instinct MI series, Radeon Pro, or compatible)
+- ROCm 5.0 or later
+- MIOpen 2.0 or later
+- rocBLAS 2.0 or later
+
+### Supported GPUs
+
+- AMD Instinct MI250X, MI250, MI210, MI100
+- AMD Radeon Pro W6800, W6900
+- AMD Radeon RX 6000 series (with ROCm 5.0+)
+
+## Installation
+
+### Install ROCm
+
+```bash
+# Ubuntu/Debian
+wget https://repo.radeon.com/rocm/rocm.gpg.key
+sudo apt-key add rocm.gpg.key
+echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/5.7 ubuntu main' | sudo tee /etc/apt/sources.list.d/rocm.list
+sudo apt update
+sudo apt install rocm-dkms
+
+# Add user to render and video groups
+sudo usermod -a -G render,video $USER
+```
+
+### Install Neurenix with ROCm
+
+```bash
+# Install pre-built package
+pip install neurenix-rocm
+
+# Build from source
+export NEURENIX_WITH_ROCM=1
+export ROCM_PATH=/opt/rocm
+pip install -e .
+```
+
+## Device Management
+
+### Check ROCm Availability
+
+```python
+import neurenix as nx
+
+# Check if ROCm is available
+if nx.rocm.is_available():
+    print("ROCm is available")
+    print(f"ROCm version: {nx.rocm.version()}")
+    print(f"Number of GPUs: {nx.rocm.device_count()}")
+else:
+    print("ROCm is not available")
+```
+
+```cpp
+// C++ ROCm detection
+#include "phynexus/hardware/rocm.h"
+
+using namespace phynexus::hardware;
+
+if (initialize_rocm()) {
+    int device_count = get_rocm_device_count();
+    std::cout << "ROCm devices: " << device_count << std::endl;
+}
+```
+
+### Get Device Properties
+
+```python
+for i in range(nx.rocm.device_count()):
+    props = nx.rocm.get_device_properties(i)
+    print(f"\nDevice {i}: {props.name}")
+    print(f"  Memory: {props.total_memory / (1024**3):.2f} GB")
+    print(f"  Compute Units: {props.multi_processor_count}")
+    print(f"  Max threads per block: {props.max_threads_per_block}")
+    print(f"  Warp size: {props.warp_size}")
+    print(f"  Architecture: {props.gcn_arch}")
+```
+
+```cpp
+// C++ device properties
+auto props = get_rocm_device_properties(0);
+std::cout << "Device: " << props.name << std::endl;
+std::cout << "Memory: " << props.total_memory / (1024*1024*1024) << " GB" << std::endl;
+std::cout << "Compute Units: " << props.multi_processor_count << std::endl;
+```
+
+### Set Current Device
+
+```python
+# Set device 0 as current
+nx.rocm.set_device(0)
+
+# Get current device
+current = nx.rocm.current_device()
+print(f"Current device: {current}")
+
+# Using context manager
+with nx.rocm.device(1):
+    tensor = nx.randn(1000, 1000)  # Created on rocm:1
+```
+
+```cpp
+// C++ device selection
+set_rocm_device(0);
+int current = get_current_rocm_device();
+```
+
+## Memory Management
+
+### Allocate Memory
+
+```python
+# Allocate tensor on ROCm device
+tensor = nx.zeros((1000, 1000), device='rocm:0')
+
+# Using Device object
+device = nx.Device.rocm(0)
+tensor = nx.empty((1000, 1000), device=device)
+```
+
+```cpp
+// C++ memory allocation
+void* ptr = rocm_malloc(1024 * 1024 * sizeof(float));
+// ... use memory ...
+rocm_free(ptr);
+```
+
+### Memory Transfer
+
+```python
+import numpy as np
+
+# Host to device
+data_cpu = np.random.randn(100, 100).astype(np.float32)
+tensor_gpu = nx.from_numpy(data_cpu, device='rocm')
+
+# Device to host
+data_back = tensor_gpu.cpu().numpy()
+
+# Device to device (same GPU)
+tensor_copy = tensor_gpu.clone()
+
+# Device to device (different GPU)
+tensor_gpu2 = tensor_gpu.to('rocm:1')
+```
+
+```cpp
+// C++ memory operations
+float* host_data = new float[size];
+void* device_data = rocm_malloc(size * sizeof(float));
+
+// Host to device
+rocm_memcpy_host_to_device(device_data, host_data, size * sizeof(float));
+
+// Device to host
+rocm_memcpy_device_to_host(host_data, device_data, size * sizeof(float));
+
+// Device to device
+void* device_data2 = rocm_malloc(size * sizeof(float));
+rocm_memcpy_device_to_device(device_data2, device_data, size * sizeof(float));
+```
+
+### Memory Statistics
+
+```python
+# Get memory info
+stats = nx.rocm.memory_stats(device=0)
+print(f"Allocated: {stats['allocated_bytes'] / (1024**3):.2f} GB")
+print(f"Reserved: {stats['reserved_bytes'] / (1024**3):.2f} GB")
+print(f"Free: {stats['free_bytes'] / (1024**3):.2f} GB")
+
+# Clear memory cache
+nx.rocm.empty_cache()
+
+# Reset statistics
+nx.rocm.reset_peak_memory_stats()
+```
+
+## Streams and Asynchronous Execution
+
+### Create Streams
+
+```python
+# Create HIP streams
+stream1 = nx.rocm.Stream()
+stream2 = nx.rocm.Stream()
+
+# Parallel execution on different streams
+with stream1:
+    result1 = model1(input1)
+
+with stream2:
+    result2 = model2(input2)
+
+# Synchronize all operations
+nx.rocm.synchronize()
+```
+
+```cpp
+// C++ stream management
+void* stream1 = rocm_create_stream();
+void* stream2 = rocm_create_stream();
+
+// ... operations on streams ...
+
+// Synchronize
+rocm_stream_synchronize(stream1);
+rocm_stream_synchronize(stream2);
+
+// Cleanup
+rocm_destroy_stream(stream1);
+rocm_destroy_stream(stream2);
+```
+
+### Stream Synchronization
+
+```python
+stream = nx.rocm.Stream()
+
+with stream:
+    # Asynchronous operations
+    tensor_gpu = tensor_cpu.to('rocm', non_blocking=True)
+    result = model(tensor_gpu)
+
+# Wait for stream to complete
+stream.synchronize()
+```
+
+## ROCm Libraries
+
+### rocBLAS
+
+Accelerated BLAS operations:
+
+```python
+# Matrix multiplication uses rocBLAS automatically
+a = nx.randn(1000, 1000, device='rocm')
+b = nx.randn(1000, 1000, device='rocm')
+c = a @ b  # Uses rocBLAS GEMM
+
+# Explicit rocBLAS usage
+from neurenix.rocm import rocblas
+
+handle = rocblas.create_handle()
+rocblas.gemm(handle, a, b, c)
+rocblas.destroy_handle(handle)
+```
+
+### MIOpen
+
+Optimized neural network primitives:
+
+```python
+# Convolution uses MIOpen automatically
+conv = nx.nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
+conv = conv.to('rocm')
+
+input = nx.randn(1, 3, 224, 224, device='rocm')
+output = conv(input)  # Uses MIOpen convolution
+
+# Enable MIOpen find mode for best performance
+nx.backends.miopen.benchmark = True
+```
+
+## Multi-GPU Training
+
+### Data Parallel
+
+```python
+from neurenix.parallel import DataParallel
+
+model = MyModel()
+if nx.rocm.device_count() > 1:
+    # Replicate model across all GPUs
+    model = DataParallel(model, device_ids=[0, 1, 2, 3])
+
+model = model.to('rocm')
+output = model(input)  # Automatically distributed
+```
+
+### Distributed Training with RCCL
+
+```python
+import neurenix.distributed as dist
+
+# Initialize with RCCL backend
+dist.init_process_group(
+    backend='rccl',  # ROCm collective communications
+    init_method='env://'
+)
+
+local_rank = dist.get_rank()
+model = MyModel().to(f'rocm:{local_rank}')
+model = dist.DistributedDataParallel(model, device_ids=[local_rank])
+
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        output = model(batch)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+```
+
+## Mixed Precision Training
+
+```python
+from neurenix.amp import autocast, GradScaler
+
+model = MyModel().to('rocm')
+optimizer = nx.optim.Adam(model.parameters())
+scaler = GradScaler()
+
+for input, target in dataloader:
+    optimizer.zero_grad()
+    
+    # Automatic mixed precision
+    with autocast(device_type='rocm'):
+        output = model(input)
+        loss = criterion(output, target)
+    
+    # Scale and step
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+```
+
+## Performance Optimization
+
+### Enable MIOpen Benchmarking
+
+```python
+# Find best algorithm for operations
+nx.backends.miopen.benchmark = True
+
+# Use deterministic algorithms
+nx.backends.miopen.deterministic = True
+```
+
+### Kernel Fusion
+
+```python
+# Enable kernel fusion
+nx.rocm.set_fusion_enabled(True)
+
+# Fused operations
+output = nx.relu(nx.batch_norm(conv(input)))
+```
+
+### Memory Pool
+
+```python
+# Configure memory allocator
+nx.rocm.set_allocator_settings(
+    max_split_size_mb=512,
+    garbage_collection_threshold=0.8
+)
+```
+
+## Profiling and Debugging
+
+### ROCm Profiler
+
+```python
+# Profile GPU operations
+with nx.rocm.profiler.profile():
+    output = model(input)
+
+# Export trace
+nx.rocm.profiler.export_chrome_trace("rocm_trace.json")
+```
+
+### rocprof Command Line
+
+```bash
+# Profile Python script
+rocprof --stats python train.py
+
+# Generate trace
+rocprof --timestamp on --basenames on python train.py
+```
+
+### Memory Profiling
+
+```python
+# Track memory usage
+with nx.rocm.memory_profiler():
+    output = model(input)
+
+# Print summary
+print(nx.rocm.memory_summary(device=0))
+```
+
+## Environment Variables
+
+```bash
+# Select specific GPUs
+export HIP_VISIBLE_DEVICES=0,1,2,3
+export ROCR_VISIBLE_DEVICES=0,1,2,3
+
+# Enable MIOpen logging
+export MIOPEN_ENABLE_LOGGING=1
+export MIOPEN_LOG_LEVEL=3
+
+# Set MIOpen find mode
+export MIOPEN_FIND_MODE=1  # Normal mode
+export MIOPEN_FIND_MODE=3  # Fast mode
+
+# Enable debugging
+export HIP_LAUNCH_BLOCKING=1
+export AMD_LOG_LEVEL=3
+```
+
+## Common Issues
+
+### Out of Memory
+
+```python
+# Reduce batch size
+batch_size = batch_size // 2
+
+# Clear cache
+nx.rocm.empty_cache()
+
+# Enable gradient checkpointing
+model = MyModel(use_checkpointing=True)
+```
+
+### Performance Issues
+
+```python
+# Profile to find bottlenecks
+with nx.rocm.profiler.profile():
+    output = model(input)
+
+# Enable benchmarking
+nx.backends.miopen.benchmark = True
+
+# Use mixed precision
+with nx.amp.autocast(device_type='rocm'):
+    output = model(input)
+```
+
+### Compatibility Issues
+
+```python
+# Check ROCm compatibility
+print(f"ROCm version: {nx.rocm.version()}")
+print(f"HIP version: {nx.rocm.hip_version()}")
+print(f"Device arch: {nx.rocm.get_device_properties(0).gcn_arch}")
+
+# Use compatibility mode if needed
+nx.rocm.set_compatibility_mode(True)
+```
+
+## Migrating from CUDA
+
+ROCm uses HIP, which is largely compatible with CUDA:
+
+```python
+# CUDA code
+tensor = tensor.cuda()
+
+# ROCm equivalent
+tensor = tensor.to('rocm')  # or tensor.rocm()
+
+# Device agnostic
+device = 'cuda' if nx.cuda.is_available() else 'rocm' if nx.rocm.is_available() else 'cpu'
+tensor = tensor.to(device)
+```
+
+## See Also
+
+- [ROCm Documentation](https://rocmdocs.amd.com/)
+- [CUDA Support](/hardware/cuda) - NVIDIA GPU alternative
+- [Multi-GPU Training](/training/distributed)
+- [Performance Optimization](/optimization/performance)

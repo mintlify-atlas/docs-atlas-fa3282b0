@@ -1,0 +1,120 @@
+---
+title: CLI Overview
+description: Command-line interface for the Neurenix AI framework
+---
+
+The Neurenix CLI provides a comprehensive set of commands for managing your machine learning projects, from initialization to deployment.
+
+## Installation
+
+The Neurenix CLI is included when you install the neurenix package:
+
+```bash
+pip install neurenix
+```
+
+## Basic Usage
+
+All Neurenix CLI commands follow this pattern:
+
+```bash
+neurenix <command> [<args>]
+```
+
+## Available Commands
+
+The Neurenix CLI provides the following commands:
+
+| Command | Description |
+|---------|-------------|
+| `init` | Initialize a new Neurenix project with folder structure and config |
+| `run` | Run a model training script with specified configuration |
+| `eval` | Evaluate a trained model with specific metrics |
+| `export` | Export a trained model to various formats (ONNX, TorchScript, etc.) |
+| `serve` | Serve a trained model as a RESTful API |
+| `save` | Save the current project state |
+| `predict` | Make predictions using a trained model |
+| `hardware` | Manage hardware settings and device selection |
+| `preprocess` | Preprocess input data for model training |
+| `monitor` | Monitor model training in real-time |
+| `optimize` | Optimize a model with hyperparameters or quantization |
+| `dataset` | Manage datasets for training and evaluation |
+| `help` | Display help information about commands |
+
+## Getting Help
+
+To get help for any command:
+
+```bash
+# Show all available commands
+neurenix help
+
+# Get help for a specific command
+neurenix help <command>
+neurenix <command> --help
+```
+
+## Common Workflows
+
+### Quick Start
+
+```bash
+# Initialize a new project
+neurenix init --name my-project --template basic
+
+# Navigate to project directory
+cd my-project
+
+# Train a model
+neurenix run train.py
+
+# Evaluate the model
+neurenix eval --model models/model.nrx --data data/test.csv
+
+# Export for deployment
+neurenix export --model models/model.nrx --format onnx
+
+# Serve the model
+neurenix serve --model models/model.nrx --port 8000
+```
+
+### Advanced Workflow
+
+```bash
+# Initialize with advanced template
+neurenix init --name advanced-project --template advanced
+
+# Train with custom configuration
+neurenix run train.py --config config.json --epochs 50 --batch-size 64
+
+# Monitor training
+neurenix monitor --log-dir logs
+
+# Optimize the model
+neurenix optimize --model models/model.nrx --method quantization
+
+# Export optimized model
+neurenix export --model models/model.nrx --format onnx --optimize --quantize int8
+```
+
+## Project Structure
+
+When you initialize a Neurenix project, the CLI creates the following structure:
+
+```
+my-project/
+├── config.json          # Project configuration
+├── train.py            # Training script
+├── data/               # Dataset directory
+├── models/             # Saved models
+├── configs/            # Additional configurations
+└── logs/               # Training logs
+```
+
+## Next Steps
+
+- [Initialize a project](/cli/init)
+- [Train a model](/cli/run)
+- [Evaluate models](/cli/eval)
+- [Export models](/cli/export)
+- [Deploy with serve](/cli/serve)

@@ -1,0 +1,532 @@
+---
+title: 'Model Quantization'
+description: 'Reduce model size and accelerate inference with INT8, FP16, and FP8 quantization'
+icon: 'compress'
+---
+
+## Overview
+
+Quantization reduces model size and accelerates inference by converting model weights and activations from higher precision (FP32) to lower precision formats (INT8, FP16, FP8). Neurenix provides comprehensive quantization support with multiple precision formats and quantization strategies.
+
+## Quantization Types
+
+Neurenix supports three quantization types:
+
+```python
+from neurenix.quantization import QuantizationType
+
+# Available types
+QuantizationType.INT8   # 8-bit integer quantization
+QuantizationType.FP16   # 16-bit floating point
+QuantizationType.FP8    # 8-bit floating point
+
+# Get all available types
+all_types = QuantizationType.all_types()
+```
+
+**Reference:** `neurenix/quantization.py:20`
+
+## Quick Start
+
+### Quantize a Model
+
+```python
+import neurenix as nx
+from neurenix.quantization import quantize_model, QuantizationType
+
+# Create and train your model
+model = create_model()
+train(model)
+
+# Quantize to INT8
+quantized_model = quantize_model(model, dtype=QuantizationType.INT8)
+
+# Use quantized model for inference
+output = quantized_model(input_data)
+```
+
+**Reference:** `neurenix/quantization.py:166`
+
+### Quantize a Tensor
+
+```python
+from neurenix.quantization import quantize_tensor
+import neurenix as nx
+
+# Create tensor
+tensor = nx.randn(100, 100)
+
+# Quantize to INT8
+quantized = quantize_tensor(tensor, dtype=QuantizationType.INT8)
+
+# Access quantization parameters
+print(f"Scale: {quantized.scale}")
+print(f"Zero point: {quantized.zero_point}")
+print(f"Data type: {quantized.dtype}")
+
+# Dequantize back to full precision
+full_precision = quantized.dequantize()
+```
+
+**Reference:** `neurenix/quantization.py:65`
+
+## Quantization Methods
+
+### INT8 Quantization
+
+Maps FP32 values to 8-bit integers (0-255):
+
+```python
+from neurenix.quantization import quantize_model, QuantizationType
+
+# Quantize model to INT8
+quantized_model = quantize_model(model, dtype=QuantizationType.INT8)
+
+# Properties:
+# - 4x memory reduction
+# - Fast integer arithmetic
+# - Minimal accuracy loss with calibration
+```
+
+**Formula:**
+```
+quantized_value = round(value / scale + zero_point)
+scale = (max - min) / 255
+zero_point = round(127 - max / scale)
+```
+
+**Reference:** `neurenix/quantization.py:76`
+
+### FP16 Quantization
+
+Half-precision floating point:
+
+```python
+quantized_model = quantize_model(model, dtype=QuantizationType.FP16)
+
+# Properties:
+# - 2x memory reduction
+# - Native GPU support
+# - Better accuracy than INT8
+# - Suitable for training and inference
+```
+
+**Reference:** `neurenix/quantization.py:90`
+
+### FP8 Quantization
+
+8-bit floating point (newest format):
+
+```python
+quantized_model = quantize_model(model, dtype=QuantizationType.FP8)
+
+# Properties:
+# - 4x memory reduction
+# - Better dynamic range than INT8
+# - Hardware support on modern GPUs (H100, etc.)
+# - Good balance between size and accuracy
+```
+
+**Reference:** `neurenix/quantization.py:97`
+
+## QuantizedTensor
+
+Wrapper for quantized tensors with metadata:
+
+```python
+from neurenix.quantization import QuantizedTensor
+import neurenix as nx
+
+# Create quantized tensor
+tensor = nx.randn(10, 10)
+quantized = quantize_tensor(tensor, dtype=QuantizationType.INT8)
+
+# Access properties
+print(quantized.tensor)        # Quantized data
+print(quantized.scale)         # Scale factor
+print(quantized.zero_point)    # Zero point
+print(quantized.dtype)         # Quantization type
+
+# Dequantize
+full_precision = quantized.dequantize()
+```
+
+**Reference:** `neurenix/quantization.py:29`
+
+## QuantizedModule
+
+Wrapper for quantized neural network modules:
+
+```python
+from neurenix.quantization import QuantizedModule
+import neurenix as nx
+
+# Create module
+layer = nx.nn.Linear(100, 50)
+
+# Quantize module
+quantized_layer = QuantizedModule(layer, dtype=QuantizationType.INT8)
+
+# Forward pass with quantized parameters
+output = quantized_layer(input_data)
+```
+
+**Reference:** `neurenix/quantization.py:112`
+
+## Per-Layer Quantization
+
+Quantize different layers with different precision:
+
+```python
+from neurenix.quantization import quantize_model_per_layer, QuantizationType
+
+# Define quantization map
+dtype_map = {
+    'conv1': QuantizationType.INT8,    # First conv layer
+    'conv2': QuantizationType.INT8,    # Second conv layer
+    'fc1': QuantizationType.FP16,      # First FC layer (keep higher precision)
+    'fc2': QuantizationType.FP16,      # Output layer (keep higher precision)
+}
+
+# Apply per-layer quantization
+quantized_model = quantize_model_per_layer(model, dtype_map)
+```
+
+**Reference:** `neurenix/quantization.py:179`
+
+## Quantization-Aware Training (QAT)
+
+Simulate quantization effects during training:
+
+```python
+from neurenix.quantization import quantization_aware_training
+import neurenix as nx
+
+# Prepare model for QAT
+model = create_model()
+qat_model = quantization_aware_training(
+    model,
+    dtype=QuantizationType.INT8
+)
+
+# Train with fake quantization
+optimizer = nx.optim.Adam(qat_model.parameters(), lr=0.001)
+
+for epoch in range(num_epochs):
+    for batch in train_loader:
+        optimizer.zero_grad()
+        loss = criterion(qat_model(batch.x), batch.y)
+        loss.backward()
+        optimizer.step()
+
+# Convert to fully quantized model
+quantized_model = quantize_model(qat_model, dtype=QuantizationType.INT8)
+```
+
+**Reference:** `neurenix/quantization.py:275`
+
+## Post-Training Quantization (PTQ)
+
+Quantize a trained model with calibration:
+
+```python
+from neurenix.quantization import calibrate_model, quantize_model
+
+# Prepare calibration data
+calibration_data = [
+    {"input": batch1},
+    {"input": batch2},
+    {"input": batch3},
+    # ... more batches
+]
+
+# Calibrate model
+calibration_params = calibrate_model(
+    model=model,
+    calibration_data=calibration_data,
+    dtype=QuantizationType.INT8,
+    num_batches=10
+)
+
+print(f"Calibrated {len(calibration_params)} layers")
+
+# Quantize model
+quantized_model = quantize_model(model, dtype=QuantizationType.INT8)
+```
+
+**Reference:** `neurenix/quantization.py:312`
+
+## Model Pruning
+
+Reduce model size by removing unimportant weights:
+
+```python
+from neurenix.quantization import prune_model
+
+# Prune model
+pruned_model = prune_model(
+    model=model,
+    sparsity=0.5,           # Remove 50% of weights
+    method='magnitude'       # 'magnitude' or 'random'
+)
+
+# Combine with quantization for maximum compression
+quantized_pruned = quantize_model(pruned_model, dtype=QuantizationType.INT8)
+```
+
+**Reference:** `neurenix/quantization.py:222`
+
+## Complete Example: Image Classification
+
+```python
+import neurenix as nx
+from neurenix.quantization import (
+    quantize_model,
+    quantization_aware_training,
+    calibrate_model,
+    QuantizationType
+)
+
+# 1. Train full precision model
+model = create_resnet18()
+optimizer = nx.optim.SGD(model.parameters(), lr=0.1)
+
+for epoch in range(90):
+    train_one_epoch(model, train_loader, optimizer)
+
+print(f"FP32 accuracy: {evaluate(model, test_loader):.2f}%")
+
+# 2. Post-training quantization (fast, good for inference)
+quantized_model = quantize_model(model, dtype=QuantizationType.INT8)
+print(f"PTQ INT8 accuracy: {evaluate(quantized_model, test_loader):.2f}%")
+
+# 3. Quantization-aware training (better accuracy)
+qat_model = quantization_aware_training(model, dtype=QuantizationType.INT8)
+optimizer = nx.optim.SGD(qat_model.parameters(), lr=0.01)
+
+for epoch in range(10):  # Fine-tune
+    train_one_epoch(qat_model, train_loader, optimizer)
+
+final_quantized = quantize_model(qat_model, dtype=QuantizationType.INT8)
+print(f"QAT INT8 accuracy: {evaluate(final_quantized, test_loader):.2f}%")
+
+# 4. Measure model size
+import os
+
+nx.save(model, 'model_fp32.pth')
+nx.save(final_quantized, 'model_int8.pth')
+
+fp32_size = os.path.getsize('model_fp32.pth') / 1024 / 1024
+int8_size = os.path.getsize('model_int8.pth') / 1024 / 1024
+
+print(f"FP32 model: {fp32_size:.2f} MB")
+print(f"INT8 model: {int8_size:.2f} MB")
+print(f"Compression ratio: {fp32_size / int8_size:.2f}x")
+```
+
+## Calibration Strategies
+
+Calibration computes optimal quantization parameters:
+
+```python
+from neurenix.quantization import calibrate_model
+
+# Collect representative data
+calibration_data = []
+for i, batch in enumerate(train_loader):
+    if i >= 100:  # Use 100 batches
+        break
+    calibration_data.append({"input": batch.x})
+
+# Calibrate with different settings
+params = calibrate_model(
+    model=model,
+    calibration_data=calibration_data,
+    dtype=QuantizationType.INT8,
+    num_batches=10  # Use subset for faster calibration
+)
+
+# Each layer gets optimal scale and zero_point
+for layer_name, (scale, zero_point) in params.items():
+    print(f"{layer_name}: scale={scale:.4f}, zero_point={zero_point}")
+```
+
+**Reference:** `neurenix/quantization.py:312`
+
+## Quantization Formats Comparison
+
+| Format | Bits | Range | Accuracy | Speed | Memory | Use Case |
+|--------|------|-------|----------|-------|--------|---------|
+| FP32 | 32 | ±3.4e38 | Baseline | 1x | 1x | Training, Reference |
+| FP16 | 16 | ±65504 | ~99% | 2-3x | 2x | Training, Inference |
+| FP8 | 8 | ±57344 | ~97% | 4-5x | 4x | Inference, New GPUs |
+| INT8 | 8 | 0-255 | 95-98% | 4-8x | 4x | Inference, CPUs |
+
+## Best Practices
+
+### 1. Choose the Right Quantization Type
+
+```python
+# For maximum speed on CPUs
+quantized = quantize_model(model, dtype=QuantizationType.INT8)
+
+# For balanced accuracy/speed on GPUs
+quantized = quantize_model(model, dtype=QuantizationType.FP16)
+
+# For modern GPUs (H100, A100)
+quantized = quantize_model(model, dtype=QuantizationType.FP8)
+```
+
+### 2. Use QAT for Better Accuracy
+
+```python
+# QAT typically gives 1-2% better accuracy than PTQ
+qat_model = quantization_aware_training(model, dtype=QuantizationType.INT8)
+train(qat_model, epochs=5)  # Fine-tune
+quantized = quantize_model(qat_model, dtype=QuantizationType.INT8)
+```
+
+### 3. Calibrate with Representative Data
+
+```python
+# Use diverse calibration data
+calibration_data = sample_diverse_batches(train_loader, n=100)
+params = calibrate_model(model, calibration_data, num_batches=20)
+```
+
+### 4. Keep Critical Layers in Higher Precision
+
+```python
+# Keep first and last layers in FP16
+dtype_map = {
+    'input_layer': QuantizationType.FP16,
+    'hidden1': QuantizationType.INT8,
+    'hidden2': QuantizationType.INT8,
+    'output_layer': QuantizationType.FP16,
+}
+quantized = quantize_model_per_layer(model, dtype_map)
+```
+
+### 5. Combine with Pruning
+
+```python
+# Prune then quantize for maximum compression
+pruned = prune_model(model, sparsity=0.5)
+quantized = quantize_model(pruned, dtype=QuantizationType.INT8)
+# Achieves ~8x compression with minimal accuracy loss
+```
+
+## Performance Benchmarks
+
+Typical speedup and accuracy (ImageNet ResNet-50):
+
+```python
+# Baseline FP32
+# Throughput: 100 images/sec
+# Top-1 Accuracy: 76.5%
+# Model Size: 97.8 MB
+
+# FP16 Quantization
+fp16_model = quantize_model(model, dtype=QuantizationType.FP16)
+# Throughput: 250 images/sec (2.5x speedup)
+# Top-1 Accuracy: 76.4% (-0.1%)
+# Model Size: 48.9 MB (2x smaller)
+
+# INT8 Post-Training Quantization
+int8_ptq = quantize_model(model, dtype=QuantizationType.INT8)
+# Throughput: 400 images/sec (4x speedup)
+# Top-1 Accuracy: 75.8% (-0.7%)
+# Model Size: 24.5 MB (4x smaller)
+
+# INT8 Quantization-Aware Training
+qat = quantization_aware_training(model, dtype=QuantizationType.INT8)
+train(qat, epochs=5)
+int8_qat = quantize_model(qat, dtype=QuantizationType.INT8)
+# Throughput: 400 images/sec (4x speedup)
+# Top-1 Accuracy: 76.2% (-0.3%)
+# Model Size: 24.5 MB (4x smaller)
+```
+
+## Debugging Quantization Issues
+
+### Compare Layer Outputs
+
+```python
+import neurenix as nx
+
+# Compare FP32 vs Quantized outputs
+fp32_output = model(test_input)
+quantized_output = quantized_model(test_input)
+
+diff = nx.abs(fp32_output - quantized_output)
+print(f"Mean difference: {diff.mean():.6f}")
+print(f"Max difference: {diff.max():.6f}")
+
+# Per-layer comparison
+for name, fp32_layer in model.named_modules():
+    if hasattr(quantized_model, name):
+        quantized_layer = getattr(quantized_model, name)
+        # Compare activations
+```
+
+### Identify Sensitive Layers
+
+```python
+# Find layers with high quantization error
+sensitive_layers = []
+
+for layer_name in model.layers:
+    # Temporarily quantize only this layer
+    test_model = model.clone()
+    test_model.layers[layer_name] = quantize_layer(test_model.layers[layer_name])
+    
+    accuracy = evaluate(test_model, val_loader)
+    accuracy_drop = baseline_accuracy - accuracy
+    
+    if accuracy_drop > 1.0:  # More than 1% drop
+        sensitive_layers.append(layer_name)
+
+print(f"Sensitive layers: {sensitive_layers}")
+
+# Keep sensitive layers in higher precision
+dtype_map = {layer: QuantizationType.FP16 for layer in sensitive_layers}
+quantized = quantize_model_per_layer(model, dtype_map)
+```
+
+## Hardware Considerations
+
+### CPU Inference
+
+```python
+# INT8 gives best speedup on CPUs
+quantized = quantize_model(model, dtype=QuantizationType.INT8)
+model_cpu = quantized.to('cpu')
+```
+
+### GPU Inference
+
+```python
+# FP16 has native Tensor Core support
+quantized = quantize_model(model, dtype=QuantizationType.FP16)
+model_gpu = quantized.to('cuda')
+
+# FP8 on new GPUs (H100, etc.)
+if nx.cuda.get_device_capability() >= (9, 0):  # Hopper or newer
+    quantized = quantize_model(model, dtype=QuantizationType.FP8)
+```
+
+### Mobile/Edge Devices
+
+```python
+# Aggressive quantization and pruning for mobile
+pruned = prune_model(model, sparsity=0.7)
+quantized = quantize_model(pruned, dtype=QuantizationType.INT8)
+# Model small enough for mobile deployment
+```
+
+## Related Topics
+
+- [Model Pruning](/optimization/pruning) - Remove unnecessary weights
+- [Knowledge Distillation](/training/distillation) - Train smaller models
+- [Mixed Precision Training](/training/mixed-precision) - FP16 training
+- [Performance Optimization](/optimization/performance) - General optimization

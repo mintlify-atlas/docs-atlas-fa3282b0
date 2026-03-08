@@ -1,0 +1,348 @@
+---
+title: 'DatasetHub'
+description: 'Easy dataset loading and management'
+---
+
+## Overview
+
+The DatasetHub module provides utilities for loading datasets from URLs or file paths, supporting various formats and preprocessing options.
+
+## DatasetFormat Enum
+
+```python
+class DatasetFormat(Enum):
+    CSV = auto()
+    JSON = auto()
+    NUMPY = auto()
+    PICKLE = auto()
+    TEXT = auto()
+    IMAGE = auto()
+    AUDIO = auto()
+    VIDEO = auto()
+    SQL = auto()
+    CUSTOM = auto()
+```
+
+### Methods
+
+#### from_extension
+
+```python
+@classmethod
+def from_extension(cls, extension: str) -> DatasetFormat
+```
+
+Determine format from file extension.
+
+<ParamField path="extension" type="str" required>
+  File extension (e.g., 'csv', 'json', 'npy').
+</ParamField>
+
+<ResponseField name="return" type="DatasetFormat">
+  The corresponding dataset format.
+</ResponseField>
+
+## Dataset Class
+
+```python
+class Dataset:
+    def __init__(
+        self,
+        data: Any,
+        format: DatasetFormat,
+        name: str = None,
+        metadata: Dict = None,
+        transform: Callable = None
+    )
+```
+
+### Parameters
+
+<ParamField path="data" type="Any" required>
+  The dataset content.
+</ParamField>
+
+<ParamField path="format" type="DatasetFormat" required>
+  Format of the dataset.
+</ParamField>
+
+<ParamField path="name" type="str">
+  Name of the dataset.
+</ParamField>
+
+<ParamField path="metadata" type="Dict">
+  Additional information about the dataset.
+</ParamField>
+
+<ParamField path="transform" type="Callable">
+  Function to transform data samples.
+</ParamField>
+
+### Methods
+
+#### __len__
+
+```python
+def __len__(self) -> int
+```
+
+Return the number of samples in the dataset.
+
+#### __getitem__
+
+```python
+def __getitem__(self, idx: Union[int, slice]) -> Any
+```
+
+Get a sample or batch from the dataset.
+
+<ParamField path="idx" type="Union[int, slice]" required>
+  Index or slice to retrieve.
+</ParamField>
+
+<ResponseField name="return" type="Any">
+  The sample or batch at the specified index.
+</ResponseField>
+
+#### to_tensor
+
+```python
+def to_tensor(self, framework: str = 'auto') -> Any
+```
+
+Convert the dataset to a tensor.
+
+<ParamField path="framework" type="str" default="auto">
+  The framework to use ('torch', 'tensorflow', 'numpy', or 'auto').
+</ParamField>
+
+<ResponseField name="return" type="Any">
+  Tensor representation of the dataset.
+</ResponseField>
+
+## DatasetHub Class
+
+```python
+class DatasetHub:
+    def __init__(self, cache_dir: Optional[str] = None)
+```
+
+Main class for loading and managing datasets.
+
+### Parameters
+
+<ParamField path="cache_dir" type="Optional[str]">
+  Directory to cache downloaded datasets. If None, uses default cache directory.
+</ParamField>
+
+### Methods
+
+#### load_dataset
+
+```python
+def load_dataset(
+    self,
+    source: Union[str, Path],
+    format: Optional[DatasetFormat] = None,
+    download: bool = True,
+    **kwargs
+) -> Dataset
+```
+
+Load a dataset from a file path or URL.
+
+<ParamField path="source" type="Union[str, Path]" required>
+  File path or URL to load the dataset from.
+</ParamField>
+
+<ParamField path="format" type="Optional[DatasetFormat]">
+  Format of the dataset. If None, inferred from file extension.
+</ParamField>
+
+<ParamField path="download" type="bool" default="True">
+  Whether to download the dataset if it's a URL.
+</ParamField>
+
+<ResponseField name="return" type="Dataset">
+  The loaded dataset.
+</ResponseField>
+
+#### register_dataset
+
+```python
+def register_dataset(
+    self,
+    name: str,
+    source: Union[str, Path],
+    format: DatasetFormat,
+    metadata: Optional[Dict] = None
+) -> None
+```
+
+Register a dataset for easy loading by name.
+
+<ParamField path="name" type="str" required>
+  Name to register the dataset under.
+</ParamField>
+
+<ParamField path="source" type="Union[str, Path]" required>
+  File path or URL of the dataset.
+</ParamField>
+
+<ParamField path="format" type="DatasetFormat" required>
+  Format of the dataset.
+</ParamField>
+
+<ParamField path="metadata" type="Optional[Dict]">
+  Additional metadata about the dataset.
+</ParamField>
+
+## Convenience Functions
+
+### load_dataset
+
+```python
+def load_dataset(*args, **kwargs) -> Dataset
+```
+
+Convenience function to load a dataset using the default DatasetHub instance.
+
+### register_dataset
+
+```python
+def register_dataset(*args, **kwargs)
+```
+
+Convenience function to register a dataset using the default DatasetHub instance.
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.data import DatasetHub, Dataset, DatasetFormat, load_dataset
+
+# Load a CSV dataset
+dataset = load_dataset(
+    "https://example.com/data.csv",
+    format=DatasetFormat.CSV
+)
+
+print(f"Dataset size: {len(dataset)}")
+
+# Access individual samples
+sample = dataset[0]
+print(f"First sample: {sample}")
+
+# Access a batch
+batch = dataset[0:10]
+print(f"Batch shape: {len(batch)}")
+
+# Load a NumPy dataset
+numpy_dataset = load_dataset(
+    "data.npy",
+    format=DatasetFormat.NUMPY
+)
+
+# Convert to tensor
+tensor_data = numpy_dataset.to_tensor(framework='neurenix')
+
+# Create DatasetHub with custom cache directory
+hub = DatasetHub(cache_dir="./my_cache")
+
+# Register a dataset
+hub.register_dataset(
+    name="my_dataset",
+    source="https://example.com/dataset.json",
+    format=DatasetFormat.JSON,
+    metadata={"version": "1.0", "author": "Neurenix Team"}
+)
+
+# Load registered dataset by name
+registered_dataset = hub.load_dataset("my_dataset")
+
+# Load with custom transformations
+def preprocess(sample):
+    # Custom preprocessing logic
+    return sample * 2.0
+
+dataset = Dataset(
+    data=my_data,
+    format=DatasetFormat.NUMPY,
+    transform=preprocess
+)
+
+# Transformed data is returned when accessing samples
+transformed_sample = dataset[0]
+
+# Load image dataset
+image_dataset = load_dataset(
+    "images/",
+    format=DatasetFormat.IMAGE
+)
+
+# Load from Parquet (for large datasets)
+parquet_dataset = load_dataset(
+    "large_dataset.parquet",
+    format=DatasetFormat.CUSTOM
+)
+
+# Use with DataLoader for training
+from neurenix.data import DataLoader
+
+train_loader = DataLoader(
+    dataset,
+    batch_size=32,
+    shuffle=True,
+    num_workers=4
+)
+
+for batch in train_loader:
+    # Training logic
+    pass
+```
+
+## Supported Formats
+
+<CardGroup cols={3}>
+  <Card title="CSV" icon="table">
+    Comma-separated values files
+  </Card>
+  <Card title="JSON" icon="code">
+    JSON and JSONL formats
+  </Card>
+  <Card title="NumPy" icon="matrix">
+    .npy and .npz arrays
+  </Card>
+  <Card title="Pickle" icon="archive">
+    Python pickle files
+  </Card>
+  <Card title="Text" icon="file-text">
+    Plain text files
+  </Card>
+  <Card title="Images" icon="image">
+    JPG, PNG, BMP, GIF
+  </Card>
+  <Card title="Audio" icon="music">
+    WAV, MP3, OGG, FLAC
+  </Card>
+  <Card title="Video" icon="video">
+    MP4, AVI, MOV, MKV
+  </Card>
+  <Card title="SQL" icon="database">
+    SQLite databases
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Tip>
+  **Caching**: DatasetHub automatically caches downloaded datasets. Use a persistent cache directory for better performance.
+</Tip>
+
+<Tip>
+  **Transformations**: Apply transformations in the Dataset constructor for automatic preprocessing during data loading.
+</Tip>
+
+<Tip>
+  **Large datasets**: For datasets that don't fit in memory, use lazy loading or streaming formats like Parquet.
+</Tip>

@@ -1,0 +1,247 @@
+---
+title: 'Module'
+description: 'Base class for neural network modules'
+---
+
+## Overview
+
+The `Module` class is the base class for all neural network modules in Neurenix. It provides parameter management, training/evaluation modes, and hierarchical organization of submodules.
+
+## Class Definition
+
+```python
+class Module:
+    def __init__(self)
+```
+
+Initialize a new module.
+
+## Core Methods
+
+### forward
+
+```python
+def forward(self, *args, **kwargs) -> Any
+```
+
+Forward pass of the module. This method should be overridden by all subclasses.
+
+<ParamField path="*args" type="Any">
+  Input arguments to the module.
+</ParamField>
+
+<ParamField path="**kwargs" type="Any">
+  Keyword arguments to the module.
+</ParamField>
+
+<ResponseField name="return" type="Any">
+  Output of the forward pass.
+</ResponseField>
+
+### __call__
+
+```python
+def __call__(self, *args, **kwargs) -> Any
+```
+
+Call the module as a function. Internally calls `forward()`.
+
+## Parameter Management
+
+### register_parameter
+
+```python
+def register_parameter(self, name: str, param: Optional[Tensor]) -> None
+```
+
+Register a parameter with the module.
+
+<ParamField path="name" type="str" required>
+  The name of the parameter.
+</ParamField>
+
+<ParamField path="param" type="Optional[Tensor]" required>
+  The parameter tensor, or None to remove the parameter.
+</ParamField>
+
+### register_module
+
+```python
+def register_module(self, name: str, module: Optional[Module]) -> None
+```
+
+Register a submodule with the module.
+
+<ParamField path="name" type="str" required>
+  The name of the submodule.
+</ParamField>
+
+<ParamField path="module" type="Optional[Module]" required>
+  The submodule, or None to remove the submodule.
+</ParamField>
+
+### register_buffer
+
+```python
+def register_buffer(self, name: str, tensor: Optional[Tensor]) -> None
+```
+
+Register a buffer with the module. Buffers are module states that should be saved along with parameters but are not parameters (e.g., running mean in batch normalization).
+
+<ParamField path="name" type="str" required>
+  The name of the buffer.
+</ParamField>
+
+<ParamField path="tensor" type="Optional[Tensor]" required>
+  The tensor to register as buffer, or None to remove the buffer.
+</ParamField>
+
+### parameters
+
+```python
+def parameters(self) -> List[Tensor]
+```
+
+Get all parameters of the module and its submodules.
+
+<ResponseField name="return" type="List[Tensor]">
+  A list of all parameter tensors.
+</ResponseField>
+
+## Training Mode
+
+### train
+
+```python
+def train(self, mode: bool = True) -> Module
+```
+
+Set the module in training mode.
+
+<ParamField path="mode" type="bool" default="True">
+  Whether to set training mode (True) or evaluation mode (False).
+</ParamField>
+
+<ResponseField name="return" type="Module">
+  The module itself.
+</ResponseField>
+
+### eval
+
+```python
+def eval(self) -> Module
+```
+
+Set the module in evaluation mode.
+
+<ResponseField name="return" type="Module">
+  The module itself.
+</ResponseField>
+
+### is_training
+
+```python
+def is_training(self) -> bool
+```
+
+Check if the module is in training mode.
+
+<ResponseField name="return" type="bool">
+  True if the module is in training mode, False otherwise.
+</ResponseField>
+
+## Device Management
+
+### to
+
+```python
+def to(self, device: Device) -> Module
+```
+
+Move the module and its parameters to the specified device.
+
+<ParamField path="device" type="Device" required>
+  The device to move to.
+</ParamField>
+
+<ResponseField name="return" type="Module">
+  The module itself.
+</ResponseField>
+
+### clone
+
+```python
+def clone(self) -> Module
+```
+
+Create a clone of this module with the same parameters.
+
+<ResponseField name="return" type="Module">
+  A new module with the same parameters.
+</ResponseField>
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.nn import Module, Linear
+
+# Define a custom module
+class MyNetwork(Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+        
+        # Register submodules
+        self.fc1 = Linear(input_size, hidden_size)
+        self.fc2 = Linear(hidden_size, output_size)
+        
+        # Register a buffer
+        self.register_buffer('running_mean', nx.Tensor.zeros((hidden_size,)))
+    
+    def forward(self, x):
+        x = self.fc1(x)
+        x = x.relu()
+        x = self.fc2(x)
+        return x
+
+# Create the network
+model = MyNetwork(784, 256, 10)
+
+# Get parameters
+params = model.parameters()
+print(f"Number of parameters: {len(params)}")
+
+# Set training mode
+model.train()
+assert model.is_training()
+
+# Set evaluation mode
+model.eval()
+assert not model.is_training()
+
+# Move to device
+device = nx.Device(nx.DeviceType.CUDA, 0)
+model.to(device)
+
+# Forward pass
+input_tensor = nx.Tensor.randn((32, 784), device=device)
+output = model(input_tensor)
+print(output.shape)  # (32, 10)
+
+# Clone the model
+cloned_model = model.clone()
+```
+
+## Built-in Modules
+
+Neurenix provides many built-in modules:
+
+- **Linear layers**: `Linear`
+- **Convolutional layers**: `Conv1d`, `Conv2d`, `Conv3d`
+- **Recurrent layers**: `RNN`, `LSTM`, `GRU`
+- **Activation functions**: `ReLU`, `Sigmoid`, `Tanh`, `Softmax`
+- **Pooling layers**: `MaxPool2d`
+- **Regularization**: `Dropout`
+- **Containers**: `Sequential`
+
+See individual documentation pages for details on each module type.

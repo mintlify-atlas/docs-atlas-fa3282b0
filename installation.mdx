@@ -1,0 +1,337 @@
+---
+title: Installation
+description: Install Neurenix using pip, conda, or from source
+---
+
+# Installation
+
+Neurenix can be installed through multiple methods depending on your environment and requirements. Choose the method that best fits your needs.
+
+## Requirements
+
+Before installing Neurenix, ensure your system meets these requirements:
+
+- **Python**: 3.8 or higher (3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14)
+- **Operating System**: Linux, macOS, or Windows
+- **Dependencies**: NumPy ≥1.24.0, SciPy ≥1.10.0, typing-extensions ≥4.7.0
+
+<Note>
+For hardware acceleration, additional dependencies may be required. See the [Hardware-Specific Setup](#hardware-specific-setup) section below.
+</Note>
+
+## Installation Methods
+
+<Steps>
+  <Step title="Choose Your Installation Method">
+    Select from pip (recommended), conda, or source installation based on your needs
+  </Step>
+  
+  <Step title="Install Dependencies">
+    The package manager will automatically install required dependencies
+  </Step>
+  
+  <Step title="Verify Installation">
+    Run a quick test to ensure Neurenix is working correctly
+  </Step>
+</Steps>
+
+### Install with pip (Recommended)
+
+The easiest way to install Neurenix is via pip:
+
+```bash
+pip install neurenix
+```
+
+For the latest development version:
+
+```bash
+pip install git+https://github.com/MilesONerd/neurenix.git
+```
+
+### Install with conda
+
+If you use Anaconda or Miniconda:
+
+```bash
+conda install -c conda-forge neurenix
+```
+
+Or create a new environment with Neurenix:
+
+```bash
+conda create -n neurenix-env python=3.11 neurenix
+conda activate neurenix-env
+```
+
+<Note>
+The conda package uses the recipe defined in `conda-recipe/meta.yaml` and includes all core dependencies (numpy ≥1.24.0, scipy ≥1.10.0, typing-extensions ≥4.7.0).
+</Note>
+
+### Install from Source
+
+For development or to get the latest features:
+
+<CodeGroup>
+```bash Clone Repository
+# Clone the repository
+git clone https://github.com/MilesONerd/neurenix.git
+cd neurenix
+```
+
+```bash Install Dependencies
+# Install build dependencies
+pip install setuptools>=42 wheel setuptools-rust>=1.0.0
+
+# Install package in editable mode
+pip install -e .
+```
+
+```bash With Rust Extensions
+# Install with Rust extensions (requires Rust toolchain)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+pip install -e .
+```
+</CodeGroup>
+
+<Warning>
+Building from source requires:
+- **setuptools** ≥42
+- **setuptools-rust** ≥1.0.0 (for Rust extensions)
+- **Rust toolchain** (for the Phynexus engine)
+- **C++ compiler** (GCC, Clang, or MSVC)
+</Warning>
+
+## Optional Dependencies
+
+Install additional features with optional dependency groups:
+
+<CodeGroup>
+```bash Development Tools
+pip install neurenix[dev]
+```
+
+```bash CUDA Support
+pip install neurenix[cuda]
+```
+
+```bash Distributed Training
+pip install neurenix[distributed]
+```
+
+```bash Agent Features
+pip install neurenix[agents]
+```
+
+```bash HuggingFace Integration
+pip install neurenix[huggingface]
+```
+
+```bash All Features
+pip install neurenix[dev,cuda,distributed,agents,huggingface]
+```
+</CodeGroup>
+
+### Optional Dependency Details
+
+| Package Group | Includes | Use Case |
+|--------------|----------|----------|
+| `dev` | pytest, pytest-cov, black, isort, mypy | Development and testing |
+| `cuda` | pycuda≥2022.1 | NVIDIA GPU acceleration |
+| `distributed` | ray≥2.0.0 | Multi-node training |
+| `agents` | gymnasium≥0.28.0 | Reinforcement learning agents |
+| `huggingface` | transformers≥4.0.0, datasets≥2.0.0 | Model hub integration |
+
+## Hardware-Specific Setup
+
+### CUDA (NVIDIA GPUs)
+
+For NVIDIA GPU support:
+
+```bash
+# Install CUDA support
+pip install neurenix[cuda]
+
+# Verify CUDA is available
+python -c "from neurenix.binding import is_cuda_available; print(is_cuda_available())"
+```
+
+<Note>
+Requires NVIDIA drivers and CUDA toolkit (11.0 or higher) to be installed separately.
+</Note>
+
+### ROCm (AMD GPUs)
+
+For AMD GPU support with ROCm:
+
+```bash
+# Install ROCm support (requires ROCm SDK)
+pip install neurenix
+
+# Verify ROCm is available
+python -c "from neurenix.binding import is_rocm_available; print(is_rocm_available())"
+```
+
+### TPU (Google Cloud)
+
+For Google Cloud TPU support:
+
+```bash
+# TPU support is included in the base package
+pip install neurenix
+
+# Verify TPU is available
+python -c "from neurenix.binding import is_tpu_available; print(is_tpu_available())"
+```
+
+### ARM Devices
+
+For ARM-based devices (Raspberry Pi, Jetson Nano, etc.):
+
+```bash
+# Install with ARM optimizations
+pip install neurenix
+
+# Verify ARM features
+python -c "from neurenix.device import DeviceType; print('ARM supported')"
+```
+
+<Note>
+Neurenix automatically detects ARM architecture features including NEON SIMD and SVE (Scalable Vector Extensions).
+</Note>
+
+### WebAssembly
+
+For browser-based execution:
+
+```bash
+# Install in Pyodide or Emscripten environment
+import micropip
+await micropip.install('neurenix')
+```
+
+## Verify Installation
+
+After installation, verify Neurenix is working correctly:
+
+```python
+import neurenix as nx
+from neurenix import Tensor, Device, DeviceType
+
+# Print version
+print(f"Neurenix version: {nx.__version__}")
+
+# Create a simple tensor
+t = Tensor([1, 2, 3, 4])
+print(f"Tensor: {t.numpy()}")
+
+# Check available devices
+print(f"CPU available: True")
+try:
+    from neurenix.binding import is_cuda_available
+    print(f"CUDA available: {is_cuda_available()}")
+except (ImportError, AttributeError):
+    print("CUDA available: False")
+
+print("Installation successful!")
+```
+
+Expected output:
+
+```
+Neurenix version: 2.0.1
+Tensor: [1 2 3 4]
+CPU available: True
+CUDA available: True/False
+Installation successful!
+```
+
+## Command-Line Interface
+
+Neurenix includes a comprehensive CLI with multiple commands:
+
+```bash
+# View all available commands
+neurenix help
+
+# Check hardware capabilities
+neurenix hardware
+
+# Initialize a new project
+neurenix init
+
+# Train a model
+neurenix run config.yaml
+
+# Serve a model
+neurenix serve model.onnx
+
+# Export to ONNX
+neurenix export model.pt --format onnx
+```
+
+<Note>
+CLI commands are registered in `pyproject.toml` and include: `init`, `run`, `save`, `predict`, `eval`, `export`, `hardware`, `preprocess`, `monitor`, `optimize`, `dataset`, `serve`, and `help`.
+</Note>
+
+## Troubleshooting
+
+### Import Error: No module named 'neurenix'
+
+Ensure you've activated the correct Python environment and installed the package:
+
+```bash
+pip list | grep neurenix
+```
+
+### CUDA Not Available
+
+If CUDA is installed but not detected:
+
+1. Check NVIDIA drivers: `nvidia-smi`
+2. Verify CUDA installation: `nvcc --version`
+3. Reinstall with CUDA support: `pip install --force-reinstall neurenix[cuda]`
+
+### Build Errors from Source
+
+If building from source fails:
+
+1. Ensure Rust is installed: `rustc --version`
+2. Update build tools: `pip install --upgrade setuptools setuptools-rust wheel`
+3. Try building without Rust extensions: `export NEURENIX_NO_RUST=1 && pip install -e .`
+
+### Missing Optional Dependencies
+
+If features are not working:
+
+```bash
+# Reinstall with all optional dependencies
+pip install neurenix[dev,cuda,distributed,agents,huggingface]
+```
+
+## Docker Installation
+
+For containerized deployments:
+
+```dockerfile
+FROM python:3.11-slim
+
+# Install Neurenix
+RUN pip install neurenix
+
+# Your application code
+COPY . /app
+WORKDIR /app
+
+CMD ["python", "train.py"]
+```
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build your first model with Neurenix
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api/tensor">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

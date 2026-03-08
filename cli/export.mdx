@@ -1,0 +1,432 @@
+---
+title: neurenix export
+description: Export a trained model to various formats for deployment
+---
+
+The `export` command converts a trained Neurenix model to different formats for deployment across various platforms and frameworks.
+
+## Usage
+
+```bash
+neurenix export --model <model_file> --format <format> [options]
+```
+
+## Options
+
+| Option | Type | Required | Default | Description |
+|--------|------|----------|---------|-------------|
+| `--model` | string | Yes | - | Path to the model file (`.nrx` format) |
+| `--format` | string | Yes | - | Export format (see formats below) |
+| `--output` | string | No | Auto-generated | Output file or directory path |
+| `--optimize` | flag | No | `false` | Optimize the exported model |
+| `--quantize` | string | No | `none` | Quantization type (`int8`, `fp16`, `none`) |
+
+## Supported Formats
+
+| Format | Extension | Description | Use Case |
+|--------|-----------|-------------|----------|
+| `onnx` | `.onnx` | Open Neural Network Exchange | Cross-platform deployment |
+| `torchscript` | `.pt` | PyTorch TorchScript | PyTorch production |
+| `tensorflow` | `_tf/` | TensorFlow SavedModel | TensorFlow serving |
+| `tflite` | `.tflite` | TensorFlow Lite | Mobile and edge devices |
+| `wasm` | `.wasm` | WebAssembly | Browser and edge deployment |
+| `c` | `.c` | C source code | Embedded systems |
+
+## Examples
+
+### Export to ONNX
+
+```bash
+neurenix export --model models/model.nrx --format onnx
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to onnx format...
+Model exported to models/model.onnx
+```
+
+### Export to TorchScript
+
+```bash
+neurenix export --model models/model.nrx --format torchscript
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to torchscript format...
+Model exported to models/model.pt
+```
+
+### Export to TensorFlow
+
+```bash
+neurenix export --model models/model.nrx --format tensorflow
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to tensorflow format...
+Model exported to models/model_tf
+```
+
+### Export to TensorFlow Lite
+
+```bash
+neurenix export --model models/model.nrx --format tflite
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to tflite format...
+Model exported to models/model.tflite
+```
+
+### Export to WebAssembly
+
+```bash
+neurenix export --model models/model.nrx --format wasm
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to wasm format...
+Model exported to models/model.wasm
+```
+
+### Export to C
+
+```bash
+neurenix export --model models/model.nrx --format c
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to c format...
+Model exported to models/model.c
+```
+
+### Custom output path
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format onnx \
+  --output deployment/production.onnx
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to onnx format...
+Model exported to deployment/production.onnx
+```
+
+### Export with optimization
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format onnx \
+  --optimize
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to onnx format...
+Optimizing model...
+Model exported to models/model.onnx
+```
+
+### Export with quantization
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format tflite \
+  --quantize int8
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to tflite format...
+Quantizing model to int8...
+Model exported to models/model.tflite
+```
+
+### Export with all optimizations
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format onnx \
+  --optimize \
+  --quantize fp16 \
+  --output deployment/optimized.onnx
+```
+
+```
+Loading model from models/model.nrx...
+Exporting model to onnx format...
+Optimizing model...
+Quantizing model to fp16...
+Model exported to deployment/optimized.onnx
+```
+
+## Quantization Options
+
+### INT8 Quantization
+
+Reduces model size by ~75% with minimal accuracy loss:
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format tflite \
+  --quantize int8
+```
+
+**Benefits:**
+- Smaller model size (4x reduction)
+- Faster inference on compatible hardware
+- Lower memory usage
+
+**Trade-offs:**
+- Small accuracy degradation (typically less than 1%)
+- Requires calibration data for best results
+
+### FP16 Quantization
+
+Reduces model size by ~50% with negligible accuracy loss:
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format onnx \
+  --quantize fp16
+```
+
+**Benefits:**
+- Smaller model size (2x reduction)
+- Faster inference on GPUs
+- Minimal accuracy loss
+
+**Trade-offs:**
+- Less size reduction than INT8
+- Requires FP16-capable hardware for speedup
+
+## Format-Specific Details
+
+### ONNX (.onnx)
+
+**Best for:** Cross-platform deployment, inference optimization
+
+```bash
+neurenix export --model models/model.nrx --format onnx
+```
+
+**Usage:**
+```python
+import onnxruntime as ort
+
+session = ort.InferenceSession("models/model.onnx")
+outputs = session.run(None, {"input": input_data})
+```
+
+### TorchScript (.pt)
+
+**Best for:** PyTorch production environments
+
+```bash
+neurenix export --model models/model.nrx --format torchscript
+```
+
+**Usage:**
+```python
+import torch
+
+model = torch.jit.load("models/model.pt")
+output = model(input_tensor)
+```
+
+### TensorFlow Lite (.tflite)
+
+**Best for:** Mobile apps (Android/iOS), edge devices
+
+```bash
+neurenix export --model models/model.nrx --format tflite --quantize int8
+```
+
+**Usage:**
+```python
+import tensorflow as tf
+
+interpreter = tf.lite.Interpreter(model_path="models/model.tflite")
+interpreter.allocate_tensors()
+```
+
+### WebAssembly (.wasm)
+
+**Best for:** Browser-based inference, edge computing
+
+```bash
+neurenix export --model models/model.nrx --format wasm --optimize
+```
+
+**Usage:**
+```javascript
+const model = await loadWasmModel('models/model.wasm');
+const output = model.predict(inputData);
+```
+
+### C (.c)
+
+**Best for:** Embedded systems, microcontrollers
+
+```bash
+neurenix export --model models/model.nrx --format c
+```
+
+**Usage:**
+```c
+#include "model.c"
+
+float input[INPUT_SIZE];
+float output[OUTPUT_SIZE];
+model_predict(input, output);
+```
+
+## Error Handling
+
+### Model not found
+
+```bash
+neurenix export --model nonexistent.nrx --format onnx
+```
+
+```
+Error: Model file 'nonexistent.nrx' not found.
+```
+
+### Invalid format
+
+```bash
+neurenix export --model models/model.nrx --format invalid
+```
+
+```
+usage: neurenix export [<args>]
+neurenix export: error: argument --format: invalid choice: 'invalid' 
+(choose from 'onnx', 'torchscript', 'tensorflow', 'tflite', 'wasm', 'c')
+```
+
+### Export error
+
+```bash
+neurenix export --model models/incompatible.nrx --format tflite
+```
+
+```
+Error exporting model: Unsupported operation for TFLite export
+```
+
+## Best Practices
+
+### 1. Test exported models
+
+Always verify exported models match original performance:
+
+```bash
+# Export model
+neurenix export --model models/model.nrx --format onnx
+
+# Test original model
+neurenix eval --model models/model.nrx --data data/test.csv
+
+# Test exported model with your deployment framework
+# Compare metrics to ensure accuracy is maintained
+```
+
+### 2. Choose appropriate format for target platform
+
+```bash
+# Mobile deployment
+neurenix export --model models/model.nrx --format tflite --quantize int8
+
+# Web deployment
+neurenix export --model models/model.nrx --format wasm --optimize
+
+# Cloud deployment
+neurenix export --model models/model.nrx --format onnx --optimize
+
+# Embedded systems
+neurenix export --model models/model.nrx --format c
+```
+
+### 3. Optimize for production
+
+Always use optimization for production deployments:
+
+```bash
+neurenix export \
+  --model models/model.nrx \
+  --format onnx \
+  --optimize \
+  --quantize fp16
+```
+
+### 4. Version exported models
+
+```bash
+neurenix export \
+  --model models/model_v1.0.nrx \
+  --format onnx \
+  --output deployment/model_v1.0.onnx
+```
+
+### 5. Document export settings
+
+Create a script to reproduce exports:
+
+```bash
+#!/bin/bash
+# export_production.sh
+
+neurenix export \
+  --model models/production.nrx \
+  --format onnx \
+  --optimize \
+  --quantize fp16 \
+  --output deployment/production.onnx
+
+echo "Export completed: deployment/production.onnx"
+```
+
+## Deployment Workflow
+
+```bash
+# 1. Train model
+neurenix run train.py
+
+# 2. Evaluate performance
+neurenix eval --model models/model.nrx --data data/test.csv
+
+# 3. Export for deployment
+neurenix export \
+  --model models/model.nrx \
+  --format onnx \
+  --optimize \
+  --quantize fp16
+
+# 4. Verify exported model
+# Use your deployment framework to test
+
+# 5. Deploy
+neurenix serve --model models/model.nrx --port 8000
+```
+
+## See Also
+
+- [Serve command](/cli/serve) - Serve models as APIs
+- [Eval command](/cli/eval) - Evaluate models
+- [Optimize command](/cli/optimize) - Optimize models
+- [Run command](/cli/run) - Train models

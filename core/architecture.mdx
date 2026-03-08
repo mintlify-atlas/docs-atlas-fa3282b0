@@ -1,0 +1,240 @@
+---
+title: Architecture Overview
+description: Understanding Neurenix's hot-swappable backend architecture and Genesis system
+---
+
+## Framework Architecture
+
+Neurenix is built on a flexible, modular architecture that enables seamless switching between different hardware backends at runtime. The framework consists of three core systems:
+
+<CardGroup cols={3}>
+  <Card title="Hot-Swappable Backends" icon="arrows-rotate">
+    Switch between CPU, GPU, TPU, and other accelerators without code changes
+  </Card>
+  <Card title="Genesis System" icon="brain">
+    Intelligent hardware detection and automatic device selection
+  </Card>
+  <Card title="Device Manager" icon="server">
+    Centralized device orchestration and memory management
+  </Card>
+</CardGroup>
+
+## Core Components
+
+### Device Manager
+
+The `DeviceManager` is a singleton that orchestrates all device operations and provides hot-swappable backend functionality.
+
+```python
+from neurenix.device_manager import DeviceManager
+from neurenix.device import Device, DeviceType
+
+# Get the device manager instance
+manager = DeviceManager()
+
+# Check available devices
+available = manager.get_available_devices()
+print(f"Available devices: {available}")
+
+# Set active device
+manager.active_device = Device(DeviceType.CUDA, 0)
+
+# Get memory statistics
+memory_stats = manager.get_memory_stats()
+print(memory_stats)
+```
+
+<Note>
+The DeviceManager uses the singleton pattern, ensuring a single instance manages all device operations across your application.
+</Note>
+
+### Genesis: Intelligent Device Selection
+
+Genesis automatically detects available hardware and selects the optimal device for your workload.
+
+```python
+from neurenix.device_manager import Genesis
+from neurenix.tensor import Tensor
+
+# Initialize Genesis
+genesis = Genesis()
+
+# Automatic device selection based on workload
+training_device = genesis.select_device(
+    workload_type="training",
+    tensor_shape=(1024, 1024)
+)
+
+inference_device = genesis.select_device(
+    workload_type="inference",
+    tensor_shape=(1, 512)
+)
+
+print(f"Training on: {training_device}")
+print(f"Inference on: {inference_device}")
+```
+
+<Info>
+Genesis prioritizes TPUs for inference workloads and CUDA/ROCm devices for training, automatically falling back to CPU when specialized hardware is unavailable.
+</Info>
+
+### Workload-Specific Selection
+
+<Tabs>
+  <Tab title="Training">
+    ```python
+    # Genesis optimizes for training workloads
+    device = genesis.select_device(workload_type="training")
+    # Preference: CUDA > ROCm > TPU > CPU
+    
+    model = Sequential(
+        Linear(784, 512),
+        ReLU(),
+        Linear(512, 10)
+    )
+    model.to(device)
+    ```
+  </Tab>
+  
+  <Tab title="Inference">
+    ```python
+    # Genesis optimizes for inference workloads
+    device = genesis.select_device(workload_type="inference")
+    # Preference: TPU > CUDA > ROCm > CPU
+    
+    model.eval()
+    model.to(device)
+    with Tensor.no_grad():
+        output = model(input_tensor)
+    ```
+  </Tab>
+  
+  <Tab title="General">
+    ```python
+    # Genesis selects based on availability
+    device = genesis.select_device(workload_type="general")
+    # Uses highest scoring available device
+    
+    data_tensor = Tensor([[1, 2], [3, 4]], device=device)
+    ```
+  </Tab>
+</Tabs>
+
+## Supported Backends
+
+Neurenix supports an extensive range of hardware backends:
+
+| Backend | DeviceType | Use Case |
+|---------|------------|----------|
+| CPU | `DeviceType.CPU` | Universal fallback, debugging |
+| NVIDIA CUDA | `DeviceType.CUDA` | GPU training and inference |
+| AMD ROCm | `DeviceType.ROCM` | AMD GPU acceleration |
+| Google TPU | `DeviceType.TPU` | Large-scale ML workloads |
+| WebGPU | `DeviceType.WEBGPU` | Browser-based inference |
+| Vulkan | `DeviceType.VULKAN` | Cross-platform GPU compute |
+| OpenCL | `DeviceType.OPENCL` | Heterogeneous computing |
+| Intel oneAPI | `DeviceType.ONEAPI` | Intel hardware acceleration |
+| DirectML | `DeviceType.DIRECTML` | Windows ML acceleration |
+| TensorRT | `DeviceType.TENSORRT` | NVIDIA optimized inference |
+| ARM | `DeviceType.ARM` | Mobile and edge devices |
+
+## Device Benchmarking
+
+Genesis can benchmark your hardware to optimize device selection:
+
+```python
+from neurenix.device_manager import Genesis
+
+genesis = Genesis()
+
+# Run benchmarks on all available devices
+benchmark_results = genesis.benchmark_devices()
+
+for device, score in benchmark_results.items():
+    print(f"{device}: {score:.2f} GFLOPS")
+```
+
+## Memory Management
+
+The DeviceManager tracks memory usage across all devices:
+
+<CodeGroup>
+```python Single Device
+# Get memory stats for a specific device
+device = Device(DeviceType.CUDA, 0)
+stats = manager.get_memory_stats(device)
+
+print(f"Total: {stats['total'] / 1e9:.2f} GB")
+print(f"Used: {stats['used'] / 1e9:.2f} GB")
+print(f"Available: {stats['available'] / 1e9:.2f} GB")
+```
+
+```python All Devices
+# Get memory stats for all devices
+all_stats = manager.get_memory_stats()
+
+for device_name, stats in all_stats.items():
+    print(f"\n{device_name}:")
+    if 'error' not in stats:
+        print(f"  Available: {stats.get('available', 0) / 1e9:.2f} GB")
+```
+</CodeGroup>
+
+## Device Synchronization
+
+Synchronize GPU operations to ensure computation completes:
+
+```python
+from neurenix.device_manager import DeviceManager
+from neurenix.device import Device, DeviceType
+
+manager = DeviceManager()
+device = Device(DeviceType.CUDA, 0)
+
+# Perform async operations
+tensor_a = Tensor.randn((1000, 1000), device=device)
+tensor_b = Tensor.randn((1000, 1000), device=device)
+result = tensor_a.matmul(tensor_b)
+
+# Synchronize to ensure completion
+manager.synchronize(device)
+
+print("Computation complete")
+```
+
+## Architecture Benefits
+
+<CardGroup cols={2}>
+  <Card title="Portability" icon="laptop-mobile">
+    Write once, run on any hardware backend without modification
+  </Card>
+  
+  <Card title="Performance" icon="gauge-high">
+    Automatic selection of optimal hardware for each workload
+  </Card>
+  
+  <Card title="Flexibility" icon="gears">
+    Hot-swap between devices at runtime for testing and optimization
+  </Card>
+  
+  <Card title="Simplicity" icon="sparkles">
+    High-level API abstracts hardware complexity
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Note>
+**Recommendation**: Let Genesis handle device selection for production workloads. Manual device selection is best reserved for debugging and specific optimization scenarios.
+</Note>
+
+1. **Use Genesis for automatic selection** - It considers memory, performance, and workload type
+2. **Synchronize before timing** - GPU operations are asynchronous
+3. **Monitor memory usage** - Especially important for large models on GPU
+4. **Benchmark your hardware** - Run `genesis.benchmark_devices()` once to optimize future selections
+
+## Related Documentation
+
+- [Device API Reference](/core/devices) - Detailed device and device type documentation
+- [Tensor Operations](/core/tensors) - Working with tensors across devices
+- [Neural Networks](/core/neural-networks) - Building models with device placement

@@ -1,0 +1,501 @@
+---
+title: Edge Device Deployment
+description: Optimize and deploy Neurenix models on edge devices and resource-constrained environments
+---
+
+## Overview
+
+Deploy Neurenix models on edge devices including mobile phones, embedded systems, IoT devices, and other resource-constrained environments. This guide covers model optimization techniques and deployment strategies for efficient edge inference.
+
+## Model Optimization Techniques
+
+### Quantization
+
+Reduce model size and improve inference speed by using lower precision formats.
+
+#### INT8 Quantization
+
+```python
+from neurenix.quantization import quantize_model, QuantizationType
+from neurenix import load_model
+
+# Load your trained model
+model = load_model("model.nx")
+
+# Quantize to INT8
+quantized_model = quantize_model(model, dtype=QuantizationType.INT8)
+
+# Test inference
+input_data = Tensor([[1.0, 2.0, 3.0]])
+output = quantized_model(input_data)
+
+print("Quantized model ready for deployment")
+```
+
+#### FP16 Quantization
+
+For GPUs that support half-precision:
+
+```python
+from neurenix.quantization import quantize_model, QuantizationType
+
+# Quantize to FP16
+fp16_model = quantize_model(model, dtype=QuantizationType.FP16)
+
+# 50% memory reduction with minimal accuracy loss
+```
+
+#### Per-Layer Quantization
+
+Apply different quantization levels to different layers:
+
+```python
+from neurenix.quantization import quantize_model_per_layer, QuantizationType
+
+# Define quantization strategy per layer
+dtype_map = {
+    "layer1": QuantizationType.INT8,
+    "layer2": QuantizationType.FP16,
+    "layer3": QuantizationType.INT8,
+    "output_layer": QuantizationType.FP16  # Keep output layer higher precision
+}
+
+quantized_model = quantize_model_per_layer(model, dtype_map)
+```
+
+### Model Pruning
+
+Remove unnecessary weights to reduce model size:
+
+```python
+from neurenix.quantization import prune_model
+
+# Prune 50% of weights
+pruned_model = prune_model(
+    model,
+    pruning_rate=0.5,
+    method="magnitude"  # Remove smallest weights
+)
+
+# Test accuracy
+accuracy = evaluate_model(pruned_model, test_data)
+print(f"Pruned model accuracy: {accuracy}")
+
+# Fine-tune after pruning
+fine_tuned_model = train_model(pruned_model, training_data, epochs=5)
+```
+
+### Structured Pruning
+
+Prune entire channels or filters:
+
+```python
+from neurenix.quantization import structured_prune_model
+
+# Prune 30% of channels
+pruned_model = structured_prune_model(
+    model,
+    pruning_rate=0.3,
+    granularity="channel"
+)
+```
+
+## ONNX Export for Edge Deployment
+
+Convert models to ONNX for deployment on various edge platforms:
+
+```python
+from neurenix.onnx_support import to_onnx
+from neurenix.quantization import quantize_model, QuantizationType
+
+# 1. Quantize model
+quantized_model = quantize_model(model, dtype=QuantizationType.INT8)
+
+# 2. Export to ONNX
+to_onnx(
+    model=quantized_model,
+    input_shape=(1, 3, 224, 224),
+    output_path="edge_model.onnx",
+    opset_version=13,
+    dynamic_axes={
+        'input': {0: 'batch'},
+        'output': {0: 'batch'}
+    }
+)
+
+print("Model ready for edge deployment")
+```
+
+## Mobile Deployment
+
+### iOS (CoreML)
+
+Convert ONNX models to CoreML:
+
+```python
+import coremltools as ct
+from coremltools.models.neural_network.quantization_utils import quantize_weights
+
+# Convert ONNX to CoreML
+mlmodel = ct.convert(
+    "edge_model.onnx",
+    source="onnx",
+    minimum_deployment_target=ct.target.iOS15
+)
+
+# Quantize weights
+quantized_mlmodel = quantize_weights(mlmodel, nbits=8)
+
+# Save
+quantized_mlmodel.save("EdgeModel.mlmodel")
+```
+
+### Android (TensorFlow Lite)
+
+Convert to TensorFlow Lite:
+
+```bash
+# First convert ONNX to TensorFlow
+onnx-tf convert -i edge_model.onnx -o model_tf
+
+# Then convert to TensorFlow Lite
+tflite_convert \
+  --saved_model_dir=model_tf \
+  --output_file=edge_model.tflite \
+  --optimization_default=DEFAULT \
+  --target_spec.supported_ops=TFLITE_BUILTINS_INT8
+```
+
+## Embedded Systems
+
+### Raspberry Pi Deployment
+
+```python
+from neurenix import load_model
+from neurenix.device import Device, DeviceType
+import numpy as np
+
+# Load quantized model on CPU
+device = Device(DeviceType.CPU)
+model = load_model("quantized_model.nx", device=device)
+
+# Inference function
+def predict(image):
+    # Preprocess
+    input_tensor = preprocess_image(image)
+    
+    # Run inference
+    with neurenix.inference_mode():
+        output = model(input_tensor)
+    
+    return output.numpy()
+
+# Optimize for low latency
+import os
+os.environ['OMP_NUM_THREADS'] = '4'  # Use all cores
+```
+
+### NVIDIA Jetson
+
+Leverage GPU acceleration:
+
+```python
+from neurenix import load_model
+from neurenix.device import Device, DeviceType
+
+# Use CUDA on Jetson
+device = Device(DeviceType.CUDA)
+model = load_model("fp16_model.nx", device=device)
+
+# Enable TensorRT optimization (via ONNX)
+from neurenix.onnx_support import to_onnx
+to_onnx(
+    model=model,
+    input_shape=(1, 3, 640, 640),
+    output_path="jetson_model.onnx"
+)
+
+# Deploy with TensorRT for maximum performance
+# See: https://docs.nvidia.com/deeplearning/tensorrt/
+```
+
+## WebAssembly Deployment
+
+Deploy models in browsers using WebAssembly:
+
+```python
+from neurenix.wasm import compile_to_wasm
+from neurenix.quantization import quantize_model, QuantizationType
+
+# Quantize for web deployment
+web_model = quantize_model(model, dtype=QuantizationType.INT8)
+
+# Compile to WebAssembly
+compile_to_wasm(
+    model=web_model,
+    output_path="model.wasm",
+    optimize=True
+)
+```
+
+Use in browser:
+
+```javascript
+import { loadModel } from 'neurenix-wasm';
+
+async function runInference() {
+    // Load model
+    const model = await loadModel('model.wasm');
+    
+    // Prepare input
+    const input = new Float32Array([1.0, 2.0, 3.0]);
+    
+    // Run inference
+    const output = await model.predict(input);
+    console.log('Prediction:', output);
+}
+```
+
+## Docker for Edge Devices
+
+### ARM64 Container
+
+```dockerfile
+FROM arm64v8/python:3.9-slim
+
+# Install dependencies
+RUN pip install --no-cache-dir neurenix numpy
+
+# Copy model
+COPY quantized_model.nx /app/model.nx
+COPY inference.py /app/
+
+WORKDIR /app
+
+# Run inference server
+CMD ["python", "inference.py"]
+```
+
+Build for ARM:
+
+```bash
+docker buildx build \
+  --platform linux/arm64 \
+  -t neurenix-edge:arm64 \
+  --push \
+  .
+```
+
+### Multi-Architecture Build
+
+```python
+from neurenix.docker import ImageBuilder
+
+builder = ImageBuilder()
+
+# Build for multiple platforms
+for platform in ["linux/amd64", "linux/arm64", "linux/arm/v7"]:
+    builder.build(
+        tag=f"neurenix-edge:{platform.replace('/', '-')}",
+        context=".",
+        platform=platform
+    )
+```
+
+## Optimization CLI
+
+Use the CLI for quick optimization:
+
+```bash
+# Quantize to INT8
+neurenix optimize \
+  --model model.nx \
+  --output model_int8.nx \
+  --quantize int8
+
+# Prune 40% of weights
+neurenix optimize \
+  --model model.nx \
+  --output model_pruned.nx \
+  --prune 0.4
+
+# Auto-optimize (quantize + prune)
+neurenix optimize \
+  --model model.nx \
+  --output model_optimized.nx \
+  --technique auto \
+  --data calibration_data.npz
+```
+
+## Performance Benchmarking
+
+### Measure Inference Time
+
+```python
+import time
+import numpy as np
+from neurenix import Tensor
+
+def benchmark_model(model, input_shape, num_iterations=100):
+    # Warmup
+    dummy_input = Tensor(np.random.randn(*input_shape).astype(np.float32))
+    for _ in range(10):
+        _ = model(dummy_input)
+    
+    # Benchmark
+    times = []
+    for _ in range(num_iterations):
+        input_data = Tensor(np.random.randn(*input_shape).astype(np.float32))
+        
+        start = time.perf_counter()
+        _ = model(input_data)
+        end = time.perf_counter()
+        
+        times.append((end - start) * 1000)  # Convert to ms
+    
+    return {
+        "mean_ms": np.mean(times),
+        "std_ms": np.std(times),
+        "min_ms": np.min(times),
+        "max_ms": np.max(times),
+        "throughput_fps": 1000.0 / np.mean(times)
+    }
+
+# Compare models
+original_stats = benchmark_model(original_model, (1, 3, 224, 224))
+quantized_stats = benchmark_model(quantized_model, (1, 3, 224, 224))
+
+print(f"Original: {original_stats['mean_ms']:.2f} ms")
+print(f"Quantized: {quantized_stats['mean_ms']:.2f} ms")
+print(f"Speedup: {original_stats['mean_ms'] / quantized_stats['mean_ms']:.2f}x")
+```
+
+### Memory Usage
+
+```python
+import sys
+import pickle
+
+def get_model_size(model):
+    """Get model size in MB"""
+    # Serialize model
+    model_bytes = pickle.dumps(model)
+    size_mb = sys.getsizeof(model_bytes) / (1024 * 1024)
+    return size_mb
+
+original_size = get_model_size(original_model)
+quantized_size = get_model_size(quantized_model)
+
+print(f"Original size: {original_size:.2f} MB")
+print(f"Quantized size: {quantized_size:.2f} MB")
+print(f"Compression: {original_size / quantized_size:.2f}x")
+```
+
+## Complete Edge Deployment Example
+
+```python
+from neurenix import load_model, save_model
+from neurenix.quantization import quantize_model, prune_model, QuantizationType
+from neurenix.onnx_support import to_onnx
+import numpy as np
+
+# 1. Load trained model
+print("Loading model...")
+model = load_model("trained_model.nx")
+
+# 2. Prune model
+print("Pruning model...")
+pruned_model = prune_model(model, pruning_rate=0.3, method="magnitude")
+
+# 3. Quantize model
+print("Quantizing model...")
+optimized_model = quantize_model(pruned_model, dtype=QuantizationType.INT8)
+
+# 4. Evaluate optimized model
+print("Evaluating...")
+test_accuracy = evaluate(optimized_model, test_dataset)
+print(f"Optimized model accuracy: {test_accuracy:.4f}")
+
+# 5. Benchmark performance
+print("Benchmarking...")
+stats = benchmark_model(optimized_model, (1, 3, 224, 224))
+print(f"Inference time: {stats['mean_ms']:.2f} ms")
+print(f"Throughput: {stats['throughput_fps']:.2f} FPS")
+
+# 6. Save optimized model
+print("Saving optimized model...")
+save_model(optimized_model, "edge_model.nx")
+
+# 7. Export to ONNX
+print("Exporting to ONNX...")
+to_onnx(
+    model=optimized_model,
+    input_shape=(1, 3, 224, 224),
+    output_path="edge_model.onnx",
+    opset_version=13
+)
+
+print("Edge deployment package ready!")
+print(f"Model size: {get_model_size(optimized_model):.2f} MB")
+print(f"ONNX model: edge_model.onnx")
+```
+
+## Best Practices
+
+1. **Start with Quantization**: INT8 quantization typically provides 2-4x speedup with minimal accuracy loss
+2. **Use Calibration Data**: Provide representative calibration data for better quantization results
+3. **Test on Target Device**: Always benchmark on the actual deployment hardware
+4. **Hybrid Approaches**: Combine quantization and pruning for maximum compression
+5. **Fine-tune After Optimization**: Retrain briefly after quantization/pruning to recover accuracy
+6. **Monitor Accuracy**: Track accuracy degradation throughout the optimization pipeline
+7. **Profile Memory and Compute**: Identify bottlenecks before optimization
+8. **Consider Model Architecture**: Some architectures (e.g., MobileNet) are already optimized for edge
+
+## Platform-Specific Guides
+
+- **Raspberry Pi**: Use INT8 quantization, limit batch size to 1, enable multi-threading
+- **NVIDIA Jetson**: Use FP16, leverage TensorRT, enable GPU memory pooling
+- **Mobile (iOS/Android)**: Use platform-specific formats (CoreML/TFLite), optimize for battery life
+- **WebAssembly**: Use INT8, enable SIMD optimizations, limit model size to less than 50MB
+- **IoT Devices**: Aggressive pruning (greater than 50%), INT8 quantization, consider model distillation
+
+## Troubleshooting
+
+### Accuracy Degradation
+
+```python
+# Quantization-aware training
+from neurenix.quantization import QuantizationAwareTraining
+
+qat = QuantizationAwareTraining(model, dtype=QuantizationType.INT8)
+qat_model = qat.train(training_data, epochs=10)
+```
+
+### Memory Issues
+
+```python
+# Reduce batch size
+batch_size = 1
+
+# Clear cache after inference
+import gc
+gc.collect()
+```
+
+### Slow Inference
+
+```python
+# Enable inference mode
+with neurenix.inference_mode():
+    output = model(input_data)
+
+# Use threading for multi-core
+import os
+os.environ['OMP_NUM_THREADS'] = str(cpu_count)
+```
+
+## Next Steps
+
+- [ONNX Export](/deployment/onnx)
+- [API Serving](/deployment/api-serving)
+- [Docker Deployment](/deployment/docker)

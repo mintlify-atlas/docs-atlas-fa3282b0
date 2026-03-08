@@ -1,0 +1,231 @@
+---
+title: 'MultiAgent'
+description: 'Multi-agent system for coordinating multiple agents'
+---
+
+## Overview
+
+The `MultiAgent` class provides functionality for coordinating multiple agents, enabling them to interact with each other and with a shared environment.
+
+## Class Definition
+
+```python
+class MultiAgent:
+    def __init__(self, agents: List[Agent], environment: Environment)
+```
+
+### Parameters
+
+<ParamField path="agents" type="List[Agent]" required>
+  List of agents in the system.
+</ParamField>
+
+<ParamField path="environment" type="Environment" required>
+  Shared environment for the agents.
+</ParamField>
+
+## Properties
+
+### step_count
+
+```python
+@property
+def step_count(self) -> int
+```
+
+Get the number of steps taken in the current episode.
+
+<ResponseField name="return" type="int">
+  Number of steps.
+</ResponseField>
+
+## Core Methods
+
+### step
+
+```python
+def step(self) -> Dict[str, Any]
+```
+
+Perform a single step of the multi-agent system.
+
+This method:
+1. Gets observations for each agent from the environment
+2. Has each agent select an action based on its observation
+3. Applies all actions to the environment
+4. Returns the results
+
+<ResponseField name="return" type="Dict[str, Any]">
+  Dictionary containing observations, actions, rewards, and done flags for each agent:
+  - `observations`: Dict mapping agent IDs to observations
+  - `actions`: Dict mapping agent IDs to actions
+  - `rewards`: Dict mapping agent IDs to rewards
+  - `done`: Boolean indicating if the episode is complete
+  - `info`: Additional information
+</ResponseField>
+
+### reset
+
+```python
+def reset(self) -> Dict[str, Any]
+```
+
+Reset the multi-agent system.
+
+This method:
+1. Resets the environment
+2. Resets each agent
+3. Returns the initial observations
+
+<ResponseField name="return" type="Dict[str, Any]">
+  Dictionary containing initial observations for each agent.
+</ResponseField>
+
+## Agent Management
+
+### add_agent
+
+```python
+def add_agent(self, agent: Agent) -> None
+```
+
+Add a new agent to the system.
+
+<ParamField path="agent" type="Agent" required>
+  Agent to add.
+</ParamField>
+
+### remove_agent
+
+```python
+def remove_agent(self, agent_id: str) -> Optional[Agent]
+```
+
+Remove an agent from the system.
+
+<ParamField path="agent_id" type="str" required>
+  ID of the agent to remove.
+</ParamField>
+
+<ResponseField name="return" type="Optional[Agent]">
+  The removed agent, or None if no agent with the given ID was found.
+</ResponseField>
+
+### __len__
+
+```python
+def __len__(self) -> int
+```
+
+Get the number of agents in the system.
+
+<ResponseField name="return" type="int">
+  Number of agents.
+</ResponseField>
+
+## Example Usage
+
+```python
+import neurenix as nx
+from neurenix.agent import Agent, MultiAgent, Environment
+
+# Define a custom environment
+class GridWorld(Environment):
+    def __init__(self, width, height):
+        super().__init__()
+        self.width = width
+        self.height = height
+        self.agent_positions = {}
+    
+    def reset(self):
+        # Reset environment state
+        self.agent_positions = {}
+        return {}
+    
+    def observe(self, agent):
+        # Return observation for a specific agent
+        position = self.agent_positions.get(agent.id, (0, 0))
+        return nx.Tensor([position[0], position[1]])
+    
+    def step(self, actions):
+        # Apply all agent actions
+        rewards = {}
+        for agent_id, action in actions.items():
+            # Update agent position based on action
+            # Calculate rewards
+            rewards[agent_id] = self.calculate_reward(agent_id, action)
+        
+        return {
+            "rewards": rewards,
+            "done": self.is_terminal(),
+            "info": {}
+        }
+
+# Create agents
+agent1 = MyAgent(name="Agent-1")
+agent2 = MyAgent(name="Agent-2")
+agent3 = MyAgent(name="Agent-3")
+
+# Create environment
+env = GridWorld(width=10, height=10)
+
+# Create multi-agent system
+mas = MultiAgent(
+    agents=[agent1, agent2, agent3],
+    environment=env
+)
+
+print(f"Number of agents: {len(mas)}")
+
+# Run simulation
+obs = mas.reset()
+
+for episode in range(100):
+    obs = mas.reset()
+    done = False
+    episode_rewards = {agent.id: 0 for agent in mas.agents}
+    
+    while not done:
+        # Step the multi-agent system
+        results = mas.step()
+        
+        # Track rewards
+        for agent_id, reward in results["rewards"].items():
+            episode_rewards[agent_id] += reward
+        
+        # Check if done
+        done = results["done"]
+        
+        # Train agents
+        for agent in mas.agents:
+            agent.learn(results)
+    
+    print(f"Episode {episode}: {episode_rewards}")
+
+# Add a new agent dynamically
+new_agent = MyAgent(name="Agent-4")
+mas.add_agent(new_agent)
+print(f"Agents after addition: {len(mas)}")
+
+# Remove an agent
+removed = mas.remove_agent("Agent-1")
+print(f"Removed: {removed.name}")
+print(f"Remaining agents: {len(mas)}")
+```
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Cooperative Tasks" icon="handshake">
+    Multiple agents working together to achieve a common goal
+  </Card>
+  <Card title="Competitive Games" icon="chess">
+    Agents competing against each other in zero-sum games
+  </Card>
+  <Card title="Mixed Settings" icon="balance-scale">
+    Combination of cooperation and competition
+  </Card>
+  <Card title="Swarm Intelligence" icon="sitemap">
+    Large numbers of simple agents exhibiting collective behavior
+  </Card>
+</CardGroup>
