@@ -1,0 +1,197 @@
+{
+  "projectType": "framework",
+  "projectName": "Neurenix",
+  "projectDescription": "An AI framework optimized for edge devices with support for multi-agent systems, reinforcement learning, and distributed training.",
+  "theme": "aspen",
+  "primaryColor": "#5ecad5",
+  "lightColor": "#212430",
+  "darkColor": "#c0d2d5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/architecture",
+              "core/tensors",
+              "core/devices",
+              "core/neural-networks"
+            ]
+          },
+          {
+            "group": "AI Agents",
+            "pages": [
+              "agents/overview",
+              "agents/single-agent",
+              "agents/multi-agent",
+              "agents/environments"
+            ]
+          },
+          {
+            "group": "Reinforcement Learning",
+            "pages": [
+              "rl/overview",
+              "rl/policies",
+              "rl/algorithms",
+              "rl/training"
+            ]
+          },
+          {
+            "group": "Advanced Features",
+            "pages": [
+              "advanced/distributed-training",
+              "advanced/federated-learning",
+              "advanced/quantization",
+              "advanced/automl",
+              "advanced/continual-learning"
+            ]
+          },
+          {
+            "group": "Specialized Modules",
+            "pages": [
+              "modules/gnn",
+              "modules/fuzzy-logic",
+              "modules/neuroevolution",
+              "modules/quantum",
+              "modules/neuro-symbolic",
+              "modules/explainability"
+            ]
+          },
+          {
+            "group": "Hardware Support",
+            "pages": [
+              "hardware/overview",
+              "hardware/cuda",
+              "hardware/rocm",
+              "hardware/arm",
+              "hardware/fpga",
+              "hardware/npu"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/onnx",
+              "deployment/api-serving",
+              "deployment/docker",
+              "deployment/kubernetes",
+              "deployment/edge-devices"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core API",
+            "pages": [
+              "api/tensor",
+              "api/device",
+              "api/module"
+            ]
+          },
+          {
+            "group": "Neural Networks",
+            "pages": [
+              "api/nn/layers",
+              "api/nn/activations",
+              "api/nn/loss-functions",
+              "api/nn/optimizers"
+            ]
+          },
+          {
+            "group": "Agents & RL",
+            "pages": [
+              "api/agent",
+              "api/multi-agent",
+              "api/rl-algorithms"
+            ]
+          },
+          {
+            "group": "Data & Utils",
+            "pages": [
+              "api/dataset-hub",
+              "api/data-loaders",
+              "api/utils"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/overview",
+              "cli/init",
+              "cli/run",
+              "cli/train",
+              "cli/eval",
+              "cli/export",
+              "cli/serve"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Hot-swappable device backends with automatic hardware detection",
+    "Native support for AI agents and multi-agent systems",
+    "Comprehensive reinforcement learning algorithms (DQN, PPO, SAC, etc.)",
+    "Distributed training with MPI, Horovod, and DeepSpeed",
+    "Edge-optimized deployment with quantization and pruning",
+    "Graph Neural Networks and advanced architectures",
+    "Federated learning with secure aggregation",
+    "AutoML and neural architecture search",
+    "Quantum computing integration (Qiskit, Cirq)",
+    "Multi-backend hardware acceleration (CUDA, ROCm, Vulkan, ARM, TPU)",
+    "ONNX model import/export",
+    "API serving with REST, WebSocket, and gRPC",
+    "Continual learning and lifelong training",
+    "Explainable AI with SHAP and LIME",
+    "Neuroevolution and evolutionary algorithms"
+  ],
+  "publicApiSurface": [
+    "Tensor",
+    "Device",
+    "DeviceType",
+    "Module",
+    "Linear",
+    "Conv2d",
+    "LSTM",
+    "Sequential",
+    "SGD",
+    "Adam",
+    "Agent",
+    "MultiAgent",
+    "Environment",
+    "DQN",
+    "PPO",
+    "SAC",
+    "GCNLayer",
+    "GATLayer",
+    "FederatedClient",
+    "FederatedServer",
+    "AutoML",
+    "ONNXConverter",
+    "APIManager",
+    "DeviceManager",
+    "DatasetHub",
+    "ContinualLearner",
+    "QuantizationConfig",
+    "DistributedTrainer"
+  ]
+}
